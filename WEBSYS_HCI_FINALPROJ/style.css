@@ -1,111 +1,617 @@
-:root{--blue:#007aff;--green:#34c759;--red:#ff3b30;--purple:#af52de;--bg:#f2f2f7;--card:#fff;--fill:rgba(120,120,128,.16);--sep:rgba(60,60,67,.2);--l1:#1c1c1e;--l2:#6c6c70;--glass:rgba(255,255,255,.55);--glass-b:rgba(255,255,255,.75);--pill:#fff;--spring:cubic-bezier(.34,1.56,.64,1);--ease:cubic-bezier(.22,1,.36,1)}
-.dark{--blue:#0a84ff;--green:#30d158;--red:#ff453a;--purple:#bf5af2;--bg:#000;--card:#1c1c1e;--fill:rgba(120,120,128,.32);--sep:rgba(84,84,88,.6);--l1:#fff;--l2:#aeaeb2;--glass:rgba(44,44,48,.55);--glass-b:rgba(255,255,255,.16);--pill:#636366}
-html{-webkit-text-size-adjust:100%}
-body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--l1);-webkit-font-smoothing:antialiased;overflow-x:hidden;transition:background .4s,color .4s}
-.t1{color:var(--l1)}.t2{color:var(--l2)}
-main>section{min-width:0}
+/* ==========================================================================
+   1. THEME & COLOR VARIABLES
+   Defines light mode (:root) and dark mode (.dark) colors.
+   Button colors (--btn-*) are darkened to meet WCAG AA contrast standards.
+   ========================================================================== */
+   :root {
+    --ios-blue: #007aff;
+    --ios-green: #34c759;
+    --ios-red: #ff3b30;
+    --ios-purple: #af52de;
+    --ios-bg: #f2f2f7;
+    --ios-card-bg: #ffffff;
+    --ios-fill: #e9e9ee;
+    --ios-sep: #d8d8de;
+    --ios-label: #1c1c1e;
+    --ios-label2: #545458;
+    --ios-nav-bg: rgba(249, 249, 249, 0.86);
+    --btn-blue: #0062cc;
+    --btn-green: #1b7f37;
+    --btn-red: #c70f1d;
+    --btn-purple: #8a3ab9;
+    --line: #8e8e93;
+}
 
-/* Liquid glass */
-.glass,.glass-bar,.glass-sheet{background:var(--glass);-webkit-backdrop-filter:blur(28px) saturate(200%);backdrop-filter:blur(28px) saturate(200%)}
-.glass{border:1px solid var(--glass-b);box-shadow:0 10px 36px rgba(0,0,0,.16),inset 0 1px 0 rgba(255,255,255,.55),inset 0 -1px 0 rgba(255,255,255,.12)}
-.glass-bar{border-bottom:.5px solid var(--sep);padding-top:max(.75rem,env(safe-area-inset-top))}
-.card{background:var(--card);border-radius:24px;box-shadow:0 1px 2px rgba(0,0,0,.04),0 10px 30px rgba(0,0,0,.06)}
-.panel{height:min(800px,82dvh);min-height:520px}
+.dark {
+    --ios-blue: #0a84ff;
+    --ios-green: #30d158;
+    --ios-red: #ff453a;
+    --ios-purple: #bf5af2;
+    --ios-bg: #000000;
+    --ios-card-bg: #1c1c1e;
+    --ios-fill: #2c2c2e;
+    --ios-sep: #3a3a3c;
+    --ios-label: #ffffff;
+    --ios-label2: #aeaeb2;
+    --ios-nav-bg: rgba(29, 29, 29, 0.86);
+    --btn-blue: #0a6fe0;
+    --btn-green: #248a3d;
+    --btn-red: #d70015;
+    --btn-purple: #9b4dd1;
+    --line: #636366;
+}
 
-/* Bottom nav with sliding pill */
-.bnav{position:fixed;left:50%;bottom:max(18px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(90%,340px);padding:5px;border-radius:999px;display:flex;z-index:40;animation:navIn .8s var(--spring) both}
-.bnav-pill{position:absolute;top:5px;bottom:5px;left:5px;width:calc((100% - 10px)/2);border-radius:999px;background:rgba(0,122,255,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.6),0 2px 10px rgba(0,122,255,.18);transition:transform .6s var(--spring)}
-.bnav[data-active=subjects] .bnav-pill{transform:translateX(100%)}
-.bnav button{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0;font-size:10px;font-weight:600;color:var(--l2);transition:color .3s,transform .4s var(--spring)}
-.bnav button:active{transform:scale(.86)}
-.bnav button.active{color:var(--blue)}
-.bnav button.active svg{animation:pop .6s var(--spring)}
+/* ==========================================================================
+   2. BASE TYPOGRAPHY & ACCESSIBILITY
+   Sets system fonts, keyboard focus rings, and pointer cursors on clickable items.
+   ========================================================================== */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+}
 
-/* Segmented control */
-.seg{position:relative;display:flex;background:var(--fill);padding:3px;border-radius:12px}
-.seg-pill{position:absolute;top:3px;bottom:3px;left:3px;width:calc((100% - 6px)/3);background:var(--pill);border-radius:9px;box-shadow:0 2px 8px rgba(0,0,0,.16);transform:translateX(calc(var(--i,0)*100%));transition:transform .55s var(--spring)}
-.seg-btn{position:relative;z-index:1;flex:1;min-width:0;padding:8px 4px;font-size:13px;font-weight:500;color:var(--l2);transition:color .3s;text-overflow:ellipsis;overflow:hidden}
-.seg-btn.active{color:var(--l1);font-weight:600}
+:focus-visible {
+    outline: 3px solid #0a84ff;
+    outline-offset: 2px;
+    border-radius: 8px;
+}
 
-/* Buttons, fields */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;font-weight:600;font-size:15px;color:#fff;padding:12px 24px;border-radius:14px;transition:transform .35s var(--spring),opacity .2s,filter .2s}
-.btn:active:not(:disabled){transform:scale(.94);filter:brightness(.92)}
-.btn:disabled{opacity:.4;cursor:not-allowed}
-.btn-sm{font-size:13px;padding:8px 16px;border-radius:12px}
-.btn-blue{background:var(--blue)}.btn-green{background:var(--green)}.btn-red{background:var(--red)}.btn-purple{background:var(--purple)}
-.btn-tint{background:rgba(255,59,48,.14);color:var(--red)}.btn-soft{background:rgba(0,122,255,.14);color:var(--blue)}.btn-gray{background:var(--fill);color:var(--l1)}
-.icon-btn{padding:8px;border-radius:999px;color:var(--l1);transition:background .2s,transform .35s var(--spring)}
-.icon-btn:hover{background:var(--fill)}.icon-btn:active{transform:scale(.85)}
-.icon-btn.danger:hover{color:var(--red)}
-.field{width:100%;padding:12px 14px;border-radius:14px;background:var(--fill);color:var(--l1);outline:none;border:2px solid transparent;transition:border-color .2s}
-.field:focus{border-color:var(--blue)}
-.menu-item{display:block;width:100%;text-align:left;padding:12px;border-radius:14px;font-weight:500;color:var(--l1);transition:background .2s}
-.menu-item:hover{background:var(--fill)}
-:focus-visible{outline:3px solid rgba(0,122,255,.45);outline-offset:2px}
+button,
+label,
+select,
+a,
+[onclick] {
+    cursor: pointer;
+}
 
-/* Drawer, scrim, modals */
-.scrim{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:opacity .45s}
-.scrim.open{opacity:1;pointer-events:auto}
-.drawer{position:fixed;top:0;left:0;bottom:0;width:18rem;z-index:51;display:flex;flex-direction:column;transform:translateX(-105%);transition:transform .55s cubic-bezier(.32,.72,0,1);box-shadow:0 0 40px rgba(0,0,0,.25)}
-.drawer.open{transform:none}
-.modal{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:1rem;background:rgba(0,0,0,.4);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .35s}
-.modal.open{opacity:1;pointer-events:auto}
-.sheet{width:100%;max-width:28rem;transform:scale(.9) translateY(24px);transition:transform .6s var(--spring)}
-.modal.open .sheet{transform:none}
+/* ==========================================================================
+   3. READABLE TEXT OVERRIDES
+   Boosts text contrast, enforces a 12px minimum font size, and removes forced uppercase.
+   ========================================================================== */
+.text-gray-400,
+.text-gray-500,
+.text-gray-600 {
+    color: var(--ios-label2) !important;
+}
 
-/* Upload & preview */
-.drop{border:1.5px dashed var(--sep);border-radius:20px;padding:2rem;text-align:center;background:var(--bg);transition:transform .4s var(--spring),background .2s}
-.drop:hover{transform:scale(1.015);background:var(--fill)}
-.preview{background:var(--bg);border-radius:18px;overflow:hidden;display:flex;align-items:center;justify-content:center;min-height:180px}
+.text-blue-500,
+.text-blue-600 {
+    color: var(--btn-blue) !important;
+}
 
-/* Tab states */
-.tab{height:100%}.tab.flex{display:flex}
-.empty{flex-grow:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2rem}
-.loading{position:absolute;inset:0;z-index:10;align-items:center;justify-content:center;background:color-mix(in srgb,var(--card) 88%,transparent);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
-.loading:not(.hidden){display:flex}
-.progress-card{width:min(320px,86%);text-align:center}
-.progress-title{font-size:15px;font-weight:600;margin-bottom:14px;min-height:22px}
-.progress-track{height:7px;background:var(--fill);border-radius:999px;overflow:hidden}
-.progress-fill{height:100%;width:0;background:linear-gradient(90deg,var(--blue),#5ac8fa);border-radius:999px;transition:width .3s ease-out}
-.progress-meta{display:flex;justify-content:space-between;margin-top:8px;font-size:12px;color:var(--l2);font-variant-numeric:tabular-nums}
+.dark .text-blue-400,
+.dark .text-blue-500 {
+    color: #64a8ff !important;
+}
 
-/* Quiz */
-.qcard{background:var(--bg);border-radius:18px;padding:1.1rem}
-.opt{display:flex;align-items:center;gap:.75rem;padding:.7rem .8rem;margin-top:.6rem;border-radius:14px;background:var(--card);border:1.5px solid transparent;font-size:14px;cursor:pointer;transition:all .3s var(--ease)}
-.opt:hover{transform:translateX(3px)}.opt.sel{border-color:var(--blue);background:color-mix(in srgb,var(--blue) 12%,var(--card))}
-.opt.ok{border-color:var(--green);background:color-mix(in srgb,var(--green) 16%,var(--card))}.opt.bad{border-color:var(--red);background:color-mix(in srgb,var(--red) 14%,var(--card))}
-.opt.done{cursor:default;transform:none}
-.expl{margin-top:.8rem;padding:.7rem .9rem;border-radius:12px;background:var(--fill);font-size:13px}
-.sticky-bar{background:var(--card);padding-bottom:.5rem}
-.score-pill{display:inline-block;padding:.6rem 1rem;border-radius:14px;background:var(--fill);font-weight:600;font-size:18px}
+.text-\[11px\] {
+    font-size: 12px !important;
+}
 
-/* Videos & subjects */
-.vcard{display:flex;flex-direction:column;gap:1rem;padding:1rem;border-radius:18px;background:var(--bg)}
-@media(min-width:640px){.vcard{flex-direction:row}.vthumb{width:13rem;flex-shrink:0}}
-.vthumb img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:12px;background:var(--fill)}
-.sub-card{padding:1.4rem;cursor:pointer;transition:transform .45s var(--spring),box-shadow .3s}
-.sub-card:hover{transform:translateY(-4px) scale(1.01)}.sub-card:active{transform:scale(.97)}
-.bubble{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--blue) 14%,transparent);font-size:22px}
-.item-row{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:1rem 1.2rem;border-radius:18px;background:var(--card)}
-.sec{font-size:1.15rem;font-weight:700;margin:1.6rem 0 .8rem}
+.uppercase {
+    text-transform: none !important;
+}
 
-/* Reviewer text */
-.reviewer{overflow-wrap:anywhere}
-.reviewer h1,.reviewer h2,.reviewer h3{font-weight:700;margin:1.4em 0 .5em;font-size:1.25rem;letter-spacing:-.01em}
-.reviewer p{margin-bottom:1em;line-height:1.6}.reviewer ul{list-style:disc;padding-left:1.5em;margin-bottom:1em}
-.reviewer li{margin-bottom:.5em;line-height:1.5}.reviewer li::marker{color:var(--blue)}
+.tracking-wider,
+.tracking-widest {
+    letter-spacing: 0 !important;
+}
 
-/* Toast */
-.toast{position:fixed;top:max(16px,env(safe-area-inset-top));left:50%;z-index:70;max-width:90%;padding:.75rem 1.1rem;border-radius:16px;background:var(--red);color:#fff;font-size:14px;font-weight:500;transform:translate(-50%,-140%);transition:transform .6s var(--spring);box-shadow:0 8px 24px rgba(0,0,0,.25)}
-.toast.show{transform:translate(-50%,0)}.toast.ok{background:var(--green)}
+::placeholder {
+    color: var(--ios-label2) !important;
+    opacity: 1;
+}
 
-/* Motion */
-@keyframes viewIn{from{opacity:0;transform:translateY(18px) scale(.98);filter:blur(6px)}to{opacity:1;transform:none;filter:none}}
-@keyframes rise{from{opacity:0;transform:translateY(22px) scale(.96)}to{opacity:1;transform:none}}
-@keyframes pop{0%{transform:scale(.7)}100%{transform:scale(1)}}
-@keyframes navIn{from{opacity:0;transform:translate(-50%,60px) scale(.9)}to{opacity:1;transform:translateX(-50%)}}
-.view-in{animation:viewIn .6s var(--ease) both}.tab-in{animation:viewIn .45s var(--ease) both}
-.stagger>*,.rise{animation:rise .6s var(--ease) both;animation-delay:calc(var(--n,0)*70ms)}
-@media(max-width:640px){.card{border-radius:20px}.panel{min-height:480px}}
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
-.hidden{display:none!important}
+/* ==========================================================================
+   4. VISUAL DECLUTTERING
+   Hides decorative background blobs, gradients, and non-essential icons.
+   ========================================================================== */
+.ios-blob {
+    display: none;
+}
+
+[class*="bg-gradient-to"] {
+    background-image: none !important;
+    background-color: var(--btn-blue) !important;
+    box-shadow: none !important;
+}
+
+#fileIcon,
+#welcomeScreen .grid > div > div.text-xl,
+#viewHome > section.grid > div > div:last-child {
+    display: none;
+}
+
+#welcomeScreen .grid > div {
+    background: transparent !important;
+    border: none !important;
+    padding: 4px !important;
+}
+
+/* ==========================================================================
+   5. SURFACES, CARDS & NAVIGATION BAR
+   Styles main content cards, modals, frosted-glass navbar, and unified stat bars.
+   ========================================================================== */
+.ios-card {
+    background: var(--ios-card-bg);
+    border: 1px solid var(--ios-sep);
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.ios-glass-card {
+    background: var(--ios-card-bg);
+    border: 1px solid var(--ios-sep);
+    border-radius: 16px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+[id$="ModalOverlay"] > .ios-card {
+    border: none;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.ios-nav {
+    background: var(--ios-nav-bg);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 0.5px solid var(--ios-sep);
+}
+
+/* Joins separate stat cards into one connected table-like block */
+#viewHome > section.grid,
+#viewProfile .grid.grid-cols-2 {
+    gap: 0 !important;
+    background: var(--ios-card-bg);
+    border: 1px solid var(--ios-sep);
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+#viewHome > section.grid > div,
+#viewProfile .grid.grid-cols-2 > div {
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: inset -1px -1px 0 var(--ios-sep) !important;
+}
+
+/* ==========================================================================
+   6. FORM INPUTS
+   Styles text inputs and select dropdowns with focus ring animations.
+   ========================================================================== */
+.ios-input {
+    width: 100%;
+    padding: 12px 15px;
+    border-radius: 14px;
+    border: 1px solid var(--ios-sep);
+    background: var(--ios-bg);
+    color: var(--ios-label);
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.ios-input:focus {
+    border-color: var(--ios-blue);
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);
+}
+
+/* ==========================================================================
+   7. BUTTONS & DISABLED STATE HINTS
+   Enforces 44px touch targets, color variants, and explains why disabled buttons are locked.
+   ========================================================================== */
+.ios-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 44px;
+    font-weight: 600;
+    font-size: 15px;
+    color: #fff;
+    padding: 10px 22px;
+    border-radius: 10px;
+    border: none;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    transition: transform 0.1s ease, filter 0.15s ease;
+}
+
+.ios-btn:hover:not(:disabled) {
+    filter: brightness(1.1);
+}
+
+.ios-btn:active:not(:disabled) {
+    transform: scale(0.97);
+}
+
+.ios-btn-sm {
+    font-size: 14px;
+    padding: 8px 16px;
+}
+
+.ios-btn-blue {
+    background: var(--btn-blue);
+}
+
+.ios-btn-green {
+    background: var(--btn-green);
+}
+
+.ios-btn-red {
+    background: var(--btn-red);
+}
+
+.ios-btn-purple {
+    background: var(--btn-purple);
+}
+
+.ios-btn-tint {
+    background: transparent;
+    color: var(--btn-red);
+    border: 1.5px solid var(--btn-red);
+    box-shadow: none;
+}
+
+.dark .ios-btn-tint {
+    color: #ff6b61;
+    border-color: #ff6b61;
+}
+
+.ios-btn.bg-gray-200 {
+    background: transparent !important;
+    border: 1.5px solid var(--line);
+    box-shadow: none;
+}
+
+.ios-btn:disabled {
+    background: #d1d1d6 !important;
+    color: #545458 !important;
+    border: none;
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
+.dark .ios-btn:disabled {
+    background: #3a3a3c !important;
+    color: #aeaeb2 !important;
+}
+
+/* Appends helpful instructions onto disabled Quiz and Video buttons */
+#generateQuizBtn:disabled::after,
+#generateVideosBtn:disabled::after {
+    content: "· upload a file first";
+    font-weight: 500;
+    font-size: 13px;
+}
+
+#submitQuizBtn:disabled::after {
+    content: "· answer every question";
+    font-weight: 500;
+    font-size: 13px;
+}
+
+#hamburgerBtn,
+#themeToggleBtn,
+#authThemeToggleBtn {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#quickJumpSubjects {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    font-weight: 600;
+}
+
+/* ==========================================================================
+   8. SEGMENTED CONTROL TABS
+   Styles the iOS-style tab switcher for Auth modes and Reviewer/Quiz/Video views.
+   ========================================================================== */
+.ios-segment {
+    display: flex;
+    gap: 2px;
+    background: var(--ios-fill);
+    padding: 3px;
+    border-radius: 12px;
+    width: 100%;
+    border: 1px solid var(--ios-sep);
+}
+
+.seg-btn {
+    flex: 1;
+    min-width: 0;
+    min-height: 44px;
+    padding: 8px 10px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ios-label);
+    border-radius: 9px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
+    transition: background 0.2s, color 0.2s;
+}
+
+.seg-btn:hover {
+    background: rgba(120, 120, 128, 0.16);
+}
+
+.seg-btn.active {
+    background: var(--ios-card-bg);
+    color: var(--btn-blue);
+    font-weight: 700;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.dark .seg-btn.active {
+    color: #64a8ff;
+}
+
+/* ==========================================================================
+   9. FILE UPLOAD AREA
+   Styles the dashed dropzone and injects a visual "Browse files" button.
+   ========================================================================== */
+#uploadArea {
+    border: 2px dashed var(--btn-blue) !important;
+    border-radius: 14px !important;
+    background: var(--ios-card-bg) !important;
+    transition: background 0.15s;
+}
+
+#uploadArea:hover,
+#uploadArea.is-drag {
+    background: rgba(10, 132, 255, 0.1) !important;
+}
+
+#uploadArea::after {
+    content: "Browse files";
+    display: inline-block;
+    margin-top: 14px;
+    padding: 11px 20px;
+    border-radius: 10px;
+    background: var(--btn-blue);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* ==========================================================================
+   10. SUBJECT CARDS & FOLDER ACTIONS
+   Adds hover states, "Open ›" indicators, and labeled Rename/Delete buttons.
+   ========================================================================== */
+#subjectsGrid > div {
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+#subjectsGrid > div:hover,
+#subjectsGrid > div:focus-visible {
+    border-color: var(--btn-blue);
+    box-shadow: 0 2px 10px rgba(0, 98, 204, 0.25);
+}
+
+#subjectsGrid > div::after {
+    content: "Open ›";
+    position: absolute;
+    right: 20px;
+    bottom: 14px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--btn-blue);
+}
+
+.dark #subjectsGrid > div::after {
+    color: #64a8ff;
+}
+
+#subjectsGrid > div > div:first-child {
+    gap: 8px !important;
+}
+
+#subjectsGrid > div button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0 12px;
+    border: 1.5px solid var(--line);
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ios-label) !important;
+    background: var(--ios-card-bg) !important;
+}
+
+#subjectsGrid > div button[title="Rename"]::after {
+    content: "Rename";
+}
+
+#subjectsGrid > div button[title="Delete"]::after {
+    content: "Delete";
+}
+
+#subjectsGrid > div button[title="Delete"] {
+    color: var(--btn-red) !important;
+    border-color: var(--btn-red);
+}
+
+@media (max-width: 480px) {
+    #subjectsGrid > div button::after {
+        display: none;
+    }
+}
+
+/* ==========================================================================
+   11. INTERACTIVE QUIZ & VIDEO CARDS
+   Styles multiple-choice options, radio buttons, grading badges, and video items.
+   ========================================================================== */
+.quiz-option {
+    min-height: 48px;
+    border: 1.5px solid var(--line) !important;
+    border-radius: 12px !important;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.quiz-option input {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--btn-blue);
+}
+
+.quiz-option:hover {
+    border-color: var(--btn-blue) !important;
+    background: rgba(10, 132, 255, 0.08);
+}
+
+#questionsWrapper > div,
+.dark #questionsWrapper > div {
+    background: var(--ios-bg) !important;
+    border: 1px solid var(--ios-sep) !important;
+    border-radius: 14px !important;
+    box-shadow: none !important;
+}
+
+#questionsWrapper label.ring-1,
+#questionsWrapper label.border-green-500,
+#questionsWrapper label.border-red-400 {
+    border-width: 2px !important;
+}
+
+#questionsWrapper label.border-green-500::after {
+    content: "✓ Correct";
+    margin-left: auto;
+    font-weight: 700;
+    font-size: 13px;
+}
+
+#questionsWrapper label.border-red-400::after {
+    content: "✗ Your answer";
+    margin-left: auto;
+    font-weight: 700;
+    font-size: 13px;
+}
+
+#videosContainer > div:not(:first-child) {
+    background: var(--ios-bg) !important;
+    border: 1px solid var(--ios-sep) !important;
+    border-radius: 12px !important;
+}
+
+/* ==========================================================================
+   12. LOADER, REVIEWER CONTENT & RESPONSIVE HELPERS
+   Animates the loading spinner, formats AI-generated HTML notes, and handles mobile/motion rules.
+   ========================================================================== */
+.loader {
+    width: 36px;
+    height: 36px;
+    border: 3.5px solid var(--ios-fill);
+    border-top-color: var(--ios-blue);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+#reviewerContainer h1,
+#reviewerContainer h2,
+#reviewerContainer h3 {
+    color: var(--ios-label);
+    font-weight: 700;
+    margin-top: 1.4em;
+    margin-bottom: 0.5em;
+    letter-spacing: -0.01em;
+}
+
+#reviewerContainer h3 {
+    font-size: 1.25rem;
+}
+
+#reviewerContainer p {
+    margin-bottom: 1em;
+    line-height: 1.65;
+}
+
+#reviewerContainer ul {
+    list-style-type: disc;
+    padding-left: 1.5em;
+    margin-bottom: 1em;
+}
+
+#reviewerContainer li {
+    margin-bottom: 0.5em;
+    line-height: 1.5;
+}
+
+#reviewerContainer li::marker {
+    color: var(--ios-blue);
+}
+
+#reviewerContainer strong {
+    color: var(--ios-label);
+}
+
+.ios-panel {
+    height: min(780px, 80dvh);
+    min-height: 520px;
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(120, 120, 128, 0.35);
+    border-radius: 4px;
+}
+
+@media (max-width: 640px) {
+    .seg-btn {
+        font-size: 13px;
+        padding: 8px 4px;
+    }
+
+    #submitQuizBtn {
+        width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Sign-out button hover fill effect */
+#drawerLogoutBtn,
+#profileSignOutBtn {
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+#drawerLogoutBtn:hover,
+#profileSignOutBtn:hover,
+.dark #drawerLogoutBtn:hover,
+.dark #profileSignOutBtn:hover {
+    background: var(--btn-red);
+    color: #fff;
+    border-color: var(--btn-red);
+    filter: none;
+}
