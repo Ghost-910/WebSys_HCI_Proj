@@ -1,0 +1,116 @@
+/* iOS-style theme: system font, grouped background, translucent bars, segmented control */
+:root {
+    --ios-blue: #007aff; --ios-green: #34c759; --ios-red: #ff3b30; --ios-purple: #af52de;
+    --ios-bg: #f2f2f7; --ios-fill: #e9e9ee; --ios-sep: #e5e5ea;
+    --ios-label: #1c1c1e; --ios-label2: #6c6c70;
+}
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', sans-serif;
+    background-color: var(--ios-bg);
+    color: var(--ios-label);
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Translucent navigation bar */
+.ios-nav {
+    background: rgba(249, 249, 249, 0.82);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 0.5px solid rgba(0, 0, 0, 0.18);
+}
+
+/* Cards */
+.ios-card {
+    background: #fff;
+    border-radius: 22px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.05);
+}
+
+/* Segmented control tabs */
+.ios-segment { display: flex; gap: 2px; background: var(--ios-fill); padding: 3px; border-radius: 11px; }
+.seg-btn {
+    flex: 1; padding: 7px 10px; font-size: 13px; font-weight: 500; color: #3c3c43;
+    border-radius: 9px; white-space: nowrap; transition: background 0.2s, box-shadow 0.2s;
+}
+.seg-btn.active { background: #fff; color: #000; font-weight: 600; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.16), 0 0 0 0.5px rgba(0, 0, 0, 0.04); }
+
+/* Buttons */
+.ios-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    font-weight: 600; font-size: 15px; color: #fff; padding: 12px 24px; border-radius: 14px;
+    transition: transform 0.12s ease, opacity 0.15s ease, filter 0.15s ease;
+}
+.ios-btn:active:not(:disabled) { transform: scale(0.97); filter: brightness(0.92); }
+.ios-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.ios-btn-sm { font-size: 13px; padding: 8px 16px; border-radius: 12px; }
+.ios-btn-blue { background: var(--ios-blue); }
+.ios-btn-green { background: var(--ios-green); }
+.ios-btn-red { background: var(--ios-red); }
+.ios-btn-purple { background: var(--ios-purple); }
+.ios-btn-tint { background: rgba(255, 59, 48, 0.12); color: var(--ios-red); }
+:focus-visible { outline: 3px solid rgba(0, 122, 255, 0.45); outline-offset: 2px; }
+
+/* Upload + preview */
+#uploadArea { border: 1.5px dashed #c7c7cc !important; border-radius: 18px !important; background: #fafafc; }
+#uploadArea:hover { background: #f2f2f7 !important; }
+#previewContainer > div:last-child { border: none !important; border-radius: 18px !important; background: var(--ios-bg) !important; }
+
+/* Loading progress card */
+.progress-card { width: min(320px, 85%); text-align: center; }
+.progress-title { font-size: 15px; font-weight: 600; margin-bottom: 14px; min-height: 22px; }
+.progress-track { height: 6px; background: var(--ios-fill); border-radius: 999px; overflow: hidden; }
+.progress-fill { height: 100%; width: 0; background: var(--ios-blue); border-radius: 999px; transition: width 0.25s ease-out; }
+.progress-meta { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--ios-label2); font-variant-numeric: tabular-nums; }
+
+/* Quiz */
+.quiz-option { transition: all 0.2s ease-in-out; border-radius: 14px !important; }
+#questionsWrapper > div { background: #f9f9fb !important; border: none !important; border-radius: 18px !important; box-shadow: none !important; }
+
+/* Video cards */
+#videosContainer > div:not(:first-child) { background: #f9f9fb; border: none !important; border-radius: 18px !important; }
+
+/* Reviewer content */
+#reviewerContainer h1, #reviewerContainer h2, #reviewerContainer h3 {
+    color: var(--ios-label); font-weight: 700; margin-top: 1.5em; margin-bottom: 0.5em; letter-spacing: -0.01em;
+}
+#reviewerContainer h3 { font-size: 1.3rem; }
+#reviewerContainer p { margin-bottom: 1em; line-height: 1.6; }
+#reviewerContainer ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 1em; }
+#reviewerContainer li { margin-bottom: 0.5em; line-height: 1.5; }
+#reviewerContainer li::marker { color: var(--ios-blue); }
+#reviewerContainer strong { color: var(--ios-label); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(60, 60, 67, 0.3); border-radius: 4px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* ---------- Responsive ---------- */
+html { -webkit-text-size-adjust: 100%; }
+body { overflow-x: hidden; }
+main > section { min-width: 0; }
+.ios-nav { padding-left: max(1.5rem, env(safe-area-inset-left)); padding-right: max(1.5rem, env(safe-area-inset-right)); padding-top: max(0.75rem, env(safe-area-inset-top)); }
+
+/* Panel height adapts to the screen (dvh = real visible height on phones) */
+.ios-panel { height: min(800px, 82vh); height: min(800px, 82dvh); min-height: 520px; }
+
+/* Tabs never overflow: buttons shrink and truncate */
+.ios-segment { width: 100%; }
+.seg-btn { min-width: 0; overflow: hidden; text-overflow: ellipsis; text-align: center; }
+
+/* Long words never push the layout wider */
+#reviewerContainer, #questionsWrapper, #videosContainer { overflow-wrap: anywhere; }
+
+@media (max-width: 640px) {
+    .seg-btn { font-size: 12.5px; padding: 8px 4px; }
+    .ios-card { border-radius: 18px; }
+    #previewContainer .min-h-\[300px\] { min-height: 180px; }
+    .progress-card { width: 90%; }
+    #submitQuizBtn { width: 100%; }
+    #scoreDisplay > div { width: 100%; justify-content: space-between; }
+}
+@media (max-width: 380px) {
+    .ios-nav h1 { font-size: 1.05rem; }
+    .ios-btn { padding: 11px 18px; font-size: 14px; }
+}

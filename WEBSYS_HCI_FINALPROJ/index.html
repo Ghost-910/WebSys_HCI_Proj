@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Study Dashboard - Note to Quiz</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="text-gray-800 antialiased min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="ios-nav py-3 px-6 md:px-8 sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+                <h1 class="text-xl font-bold text-gray-900 tracking-tight">EduMaxxing <span class="text-blue-600">AI</span></h1>
+            </div>
+            <div class="hidden sm:block text-sm font-medium text-gray-500 bg-gray-200/70 px-3 py-1 rounded-full">
+                Interactive Study Session
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-7xl mx-auto w-full p-3 sm:p-4 md:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+        <!-- Left Column: Upload & Preview -->
+        <section class="lg:col-span-5 ios-card p-6 flex flex-col gap-6 lg:sticky lg:top-24">
+            <div>
+                <h2 class="text-lg font-semibold text-gray-900 mb-1">Upload Notes</h2>
+                <p class="text-sm text-gray-500 mb-4">Upload a clear picture of your handwritten notes or textbook to generate a reviewer and quiz.</p>
+
+                <!-- Upload Area -->
+                <div id="uploadArea" class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:bg-gray-50 transition-colors cursor-pointer relative">
+                    <input type="file" id="fileInput" accept="image/png, image/jpeg, image/webp" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    <p class="text-sm font-medium text-gray-700">Click to upload or drag and drop</p>
+                    <p class="text-xs text-gray-500 mt-1">PNG, JPG, WebP up to 5MB</p>
+                </div>
+            </div>
+
+            <!-- Image Preview Area -->
+            <div id="previewContainer" class="hidden flex-col gap-4">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-sm font-semibold text-gray-700">Notes Preview</h3>
+                    <button id="clearBtn" class="ios-btn ios-btn-sm ios-btn-tint">Upload Different Image</button>
+                </div>
+                <div class="bg-gray-50 rounded-xl overflow-hidden border border-gray-200 flex items-center justify-center min-h-[300px]">
+                    <img id="imagePreview" src="" alt="Notes Preview" class="w-full max-h-[600px] object-contain">
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Column: Tabs & Content -->
+        <section class="lg:col-span-7 ios-card flex flex-col relative ios-panel">
+
+            <!-- Tabs Header -->
+            <div class="px-5 pt-5 pb-1">
+                <nav class="ios-segment" aria-label="Tabs">
+                    <button id="btnTabReviewer" class="seg-btn active"><span class="hidden sm:inline">Study&nbsp;</span>Reviewer</button>
+                    <button id="btnTabQuiz" class="seg-btn"><span class="hidden sm:inline">Practice&nbsp;</span>Quiz</button>
+                    <button id="btnTabVideos" class="seg-btn">Videos</button>
+                </nav>
+            </div>
+
+            <!-- Content Area -->
+            <div class="flex-grow p-4 sm:p-6 md:p-8 overflow-y-auto relative">
+
+                <!-- Reviewer Tab -->
+                <div id="tabReviewerContent" class="h-full flex flex-col">
+                    <div id="reviewerEmptyState" class="flex-grow flex flex-col items-center justify-center text-center">
+                        <div class="bg-blue-50 p-4 rounded-full mb-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-2">Upload notes to generate a reviewer</h3>
+                        <p class="text-sm text-gray-500 max-w-md mx-auto">Your AI study guide will appear here once you upload an image.</p>
+                    </div>
+
+                    <div id="reviewerLoadingState" class="hidden absolute inset-0 bg-white/90 backdrop-blur-sm flex-col items-center justify-center z-10">
+                        <div class="loader mb-4"></div>
+                        <p class="text-sm font-medium text-gray-700">Extracting key concepts...</p>
+                    </div>
+
+                    <div id="reviewerContainer" class="hidden text-gray-800 space-y-4"></div>
+                </div>
+
+                <!-- Videos Tab -->
+                <div id="tabVideosContent" class="hidden h-full flex-col">
+                    <div id="videosEmptyState" class="flex-grow flex flex-col items-center justify-center text-center">
+                        <div class="bg-red-50 p-4 rounded-full mb-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-2">Learn more with videos</h3>
+                        <p class="text-sm text-gray-500 max-w-md mx-auto mb-6">YouTube suggestions for your topic appear here after your reviewer is ready.</p>
+                        <button id="generateVideosBtn" class="ios-btn ios-btn-red" disabled>
+                            Suggest Videos
+                        </button>
+                    </div>
+
+                    <div id="videosLoadingState" class="hidden absolute inset-0 bg-white/90 backdrop-blur-sm flex-col items-center justify-center z-10">
+                        <div class="loader mb-4" style="border-top-color:#ef4444"></div>
+                        <p class="text-sm font-medium text-gray-700">Finding videos for your topic...</p>
+                    </div>
+
+                    <div id="videosContainer" class="hidden flex-col gap-4"></div>
+                </div>
+
+                <!-- Quiz Tab -->
+                <div id="tabQuizContent" class="hidden h-full flex-col">
+                    <div id="quizEmptyState" class="flex-grow flex flex-col items-center justify-center text-center">
+                        <div class="bg-purple-50 p-4 rounded-full mb-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-2">Ready to test your knowledge?</h3>
+                        <p class="text-sm text-gray-500 max-w-md mx-auto mb-6">Generate a 5-question quiz based on your uploaded notes.</p>
+                        <button id="generateQuizBtn" class="ios-btn ios-btn-purple" disabled>
+                            Generate Quiz Now
+                        </button>
+                    </div>
+
+                    <div id="quizLoadingState" class="hidden absolute inset-0 bg-white/90 backdrop-blur-sm flex-col items-center justify-center z-10">
+                        <div class="loader mb-4" style="border-top-color:#a855f7"></div>
+                        <p class="text-sm font-medium text-gray-700">Crafting your quiz...</p>
+                    </div>
+
+                    <div id="quizContainer" class="hidden flex-col h-full">
+                        <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
+                            <h2 class="text-xl font-bold text-gray-900">Practice Quiz</h2>
+                            <span class="bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full" id="quizStatusBadge">In Progress</span>
+                        </div>
+
+                        <div id="questionsWrapper" class="flex-grow space-y-8 pr-2 pb-4"></div>
+
+                        <div class="mt-6 pt-4 border-t border-gray-100 sticky bottom-0 bg-white pb-2 flow-root">
+                            <button id="submitQuizBtn" class="ios-btn ios-btn-green w-full sm:w-auto sm:float-right" disabled>
+                                Submit Answers
+                            </button>
+                            <div id="scoreDisplay" class="hidden items-center justify-between w-full">
+                                <div class="bg-gray-100 p-3 rounded-xl border border-gray-200 flex items-center gap-4">
+                                    <p class="text-sm text-gray-500 font-medium">FINAL SCORE</p>
+                                    <p class="text-3xl font-bold text-gray-900 leading-none"><span id="scoreValue">0</span><span class="text-lg text-gray-400 font-normal">/5</span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Error Toast -->
+    <div id="errorToast" class="fixed bottom-6 right-6 z-50 max-w-sm bg-red-600 text-white text-sm px-4 py-3 rounded-xl shadow-lg transform translate-y-20 opacity-0 transition-all duration-300">
+        <span id="errorMessage"></span>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
