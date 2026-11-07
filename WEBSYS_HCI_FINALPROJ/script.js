@@ -1,384 +1,945 @@
-// ---------- Configuration ----------
-const API_KEY = "";      // Gemini key (do not share it)
-const YT_API_KEY = "";   // YouTube Data API key
+// --- Configuration ---
+const API_KEY = "";
+const YT_API_KEY = "";
 const MODEL = "gemini-3.8-flash";
-const MAX_FILE_BYTES = 10 * 1024 * 1024, MAX_TEXT_CHARS = 60000;
-const RETRY = [429, 500, 503, 504], MAX_ATTEMPTS = 4;
+const MAX_TEXT_CHARS = 60000;
 
-// ---------- Helpers ----------
+// --- Application & User State ---
+let registeredUsers = JSON.parse(localStorage.getItem('edumaxxing_users')) || [];
+let currentUser = JSON.parse(localStorage.getItem('edumaxxing_current_user')) || null;
+
+let currentBase64Image = null, currentMimeType = null, currentText = null;
+let generatedQuizData = null, userAnswers = {};
+let uploadId = 0, currentGeneratedReviewerHTML = "", currentUploadedFileName = "";
+let loadingInterval = null, secondsElapsed = 0;
+
+let savedSubjects = [];
+let savedMaterials = [];
+let userStats = { uploads: 0, quizzesGraded: 0 };
+
+// --- DOM Helper ---
 const $ = (id) => document.getElementById(id);
-const show = (el, d) => { el.classList.remove('hidden'); if (d) el.classList.add(d); };
-const hide = (el, d) => { el.classList.add('hidden'); if (d) el.classList.remove(d); };
-const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const parseJSON = (t) => JSON.parse(t.replace(/```json|```/gi, '').trim());
-const store = {
-    get: (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
-    set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { toast('Could not save (storage full or blocked).'); } }
-};
-function clean(html) { // strip scripts / event handlers from AI-made HTML
-    const d = new DOMParser().parseFromString(html, 'text/html');
-    d.querySelectorAll('script,iframe,object,embed,style,link,meta').forEach(n => n.remove());
-    d.body.querySelectorAll('*').forEach(n => [...n.attributes].forEach(a => { if (/^on/i.test(a.name) || /^\s*javascript:/i.test(a.value)) n.removeAttribute(a.name); }));
-    return d.body.innerHTML;
-}
-const decode = (s) => new DOMParser().parseFromString(s || '', 'text/html').documentElement.textContent;
-let toastTimer;
-function toast(msg, ok = false) {
-    $('toastMsg').textContent = msg; const t = $('toast');
-    t.classList.toggle('ok', ok); t.classList.add('show');
-    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 4000);
-}
-const stagger = (el) => [...el.children].forEach((c, i) => c.style.setProperty('--n', i));
-const openModal = (m) => m.classList.add('open'), closeModal = (m) => m.classList.remove('open');
 
-// ---------- State ----------
-let src = null;            // { mime, b64 } or { text }
-let uploadId = 0, quizData = null, answers = {}, reviewerHTML = '', videosData = null;
-let subjects = store.get('edu_subjects', ['Computer Science 101', 'Mathematics']);
-let materials = store.get('edu_materials', []);
-let openSub = null, editingSub = null;
+// Stage Containers
+const authScreen = $('authScreen');
+const welcomeScreen = $('welcomeScreen');
+const mainAppWrapper = $('mainAppWrapper');
 
-// ---------- Progress with learned time estimates ----------
-// Real durations are measured and averaged, so the estimate adapts to your connection and the model.
-const timing = store.get('edu_timing', { reviewer: 18, quiz: 18, videos: 14 });
-const STEPS = {
-    reviewer: ['Reading your notes…', 'Extracting key concepts…', 'Writing your reviewer…'],
-    quiz: ['Reading your notes…', 'Drafting questions…', 'Checking answers…'],
-    videos: ['Finding your topic…', 'Searching YouTube…', 'Picking the best videos…']
-};
-function makeProgress(name, el) {
-    el.innerHTML = '<div class="progress-card"><div class="progress-title"></div><div class="progress-track"><div class="progress-fill"></div></div><div class="progress-meta"><span class="pct"></span><span class="hint"></span></div></div>';
-    const q = (s) => el.querySelector(s); let timer, t0 = 0;
-    const paint = () => {
-        const exp = timing[name], t = (Date.now() - t0) / 1000, steps = STEPS[name];
-        const pct = 92 * (1 - Math.exp(-t / (exp * 0.6)));
-        q('.progress-title').textContent = steps[Math.min(steps.length - 1, Math.floor(pct / (92 / steps.length)))];
-        q('.progress-fill').style.width = pct + '%'; q('.pct').textContent = Math.round(pct) + '%';
-        q('.hint').textContent = t < exp ? `About ${Math.max(1, Math.round(exp - t))}s left` : 'Almost there…';
-    };
-    return {
-        start() { t0 = Date.now(); clearInterval(timer); paint(); timer = setInterval(paint, 200); show(el, 'flex'); },
-        stop() { clearInterval(timer); hide(el, 'flex'); },
-        finish() {
-            const actual = Math.min(90, (Date.now() - t0) / 1000);
-            timing[name] = Math.round((timing[name] * 0.5 + actual * 0.5) * 10) / 10; store.set('edu_timing', timing);
-            clearInterval(timer); q('.progress-fill').style.width = '100%'; q('.pct').textContent = '100%';
-            setTimeout(() => hide(el, 'flex'), 250);
+// Auth Elements
+const tabSignInBtn = $('tabSignInBtn'), tabSignUpBtn = $('tabSignUpBtn');
+const signupExtraFields = $('signupExtraFields'), authForm = $('authForm');
+const authNameInput = $('authNameInput'), authProgramInput = $('authProgramInput');
+const authEmailInput = $('authEmailInput'), authPasswordInput = $('authPasswordInput');
+const authSubmitBtn = $('authSubmitBtn'), googleSignInBtn = $('googleSignInBtn');
+const googleModalOverlay = $('googleModalOverlay'), googleSavedAccountsList = $('googleSavedAccountsList');
+const googleNameInput = $('googleNameInput'), googleEmailInput = $('googleEmailInput');
+
+// Welcome Screen Elements
+const welcomeAvatar = $('welcomeAvatar'), welcomeUserName = $('welcomeUserName'), startGeneratingBtn = $('startGeneratingBtn');
+
+// Main App Views & Navigation
+const viewHome = $('viewHome'), viewSubjects = $('viewSubjects'), viewProfile = $('viewProfile');
+const navHomeBtn = $('navHomeBtn'), navSubjectsBtn = $('navSubjectsBtn'), navProfileBtn = $('navProfileBtn');
+const hamburgerBtn = $('hamburgerBtn'), sideMenuDrawer = $('sideMenuDrawer'), sideMenuOverlay = $('sideMenuOverlay');
+
+// Upload & Generator Elements
+const fileInput = $('fileInput'), uploadArea = $('uploadArea'), previewContainer = $('previewContainer');
+const imagePreview = $('imagePreview'), clearBtn = $('clearBtn'), fileCard = $('fileCard');
+const fileName = $('fileName'), fileMeta = $('fileMeta'), fileIcon = $('fileIcon');
+
+const btnTabReviewer = $('btnTabReviewer'), btnTabQuiz = $('btnTabQuiz'), btnTabVideos = $('btnTabVideos');
+const tabReviewerContent = $('tabReviewerContent'), tabQuizContent = $('tabQuizContent'), tabVideosContent = $('tabVideosContent');
+const reviewerContainer = $('reviewerContainer'), quizContainer = $('quizContainer'), videosContainer = $('videosContainer');
+const generateQuizBtn = $('generateQuizBtn'), submitQuizBtn = $('submitQuizBtn'), generateVideosBtn = $('generateVideosBtn');
+const scoreDisplay = $('scoreDisplay'), scoreValue = $('scoreValue');
+const saveActionHeader = $('saveActionHeader'), openSaveModalBtn = $('openSaveModalBtn');
+
+// Modals
+const saveModalOverlay = $('saveModalOverlay'), saveSubjectSelect = $('saveSubjectSelect'), saveTitleInput = $('saveTitleInput');
+const addSubjectModalOverlay = $('addSubjectModalOverlay'), newSubjectInput = $('newSubjectInput');
+const editSubjectModalOverlay = $('editSubjectModalOverlay'), editSubjectInput = $('editSubjectInput');
+const deleteSubjectModalOverlay = $('deleteSubjectModalOverlay');
+
+let authMode = 'signin';
+let subjectToEdit = null, subjectToDelete = null;
+
+// --- Initialize App ---
+initTheme();
+if (currentUser) {
+    loadUserData();
+    showWelcomeScreen();
+} else {
+    showAuthScreen();
+}
+
+// ==========================================
+// THEME (DARK / LIGHT MODE)
+// ==========================================
+function initTheme() {
+    const isDark = localStorage.getItem('theme') === 'dark' ||
+        (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.classList.toggle('dark', isDark);
+    updateThemeIcons(isDark);
+}
+
+function toggleTheme() {
+    const isDark = document.documentElement.classList.toggle('dark');
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    updateThemeIcons(isDark);
+}
+
+function updateThemeIcons(isDark) {
+    document.querySelectorAll('.sun-icon').forEach(el => el.classList.toggle('hidden', !isDark));
+    document.querySelectorAll('.moon-icon').forEach(el => el.classList.toggle('hidden', isDark));
+}
+
+$('themeToggleBtn').addEventListener('click', toggleTheme);
+$('authThemeToggleBtn').addEventListener('click', toggleTheme);
+
+// ==========================================
+// STAGE 1 & 2: AUTHENTICATION & ONBOARDING
+// ==========================================
+function setAuthMode(mode) {
+    authMode = mode;
+    tabSignInBtn.classList.toggle('active', mode === 'signin');
+    tabSignUpBtn.classList.toggle('active', mode === 'signup');
+    signupExtraFields.classList.toggle('hidden', mode === 'signin');
+    authSubmitBtn.textContent = mode === 'signin' ? 'Sign In' : 'Create Account';
+}
+
+tabSignInBtn.addEventListener('click', () => setAuthMode('signin'));
+tabSignUpBtn.addEventListener('click', () => setAuthMode('signup'));
+
+authForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const email = authEmailInput.value.trim().toLowerCase();
+    const password = authPasswordInput.value;
+
+    if (authMode === 'signup') {
+        const name = authNameInput.value.trim();
+        const program = authProgramInput.value.trim() || 'BS Computer Science';
+        if (!name) return showToast('Please enter your full name.');
+        if (registeredUsers.some(u => u.email === email)) {
+            return showToast('An account with this email already exists.');
         }
-    };
-}
-const P = { reviewer: makeProgress('reviewer', $('rvLoading')), quiz: makeProgress('quiz', $('quizLoading')), videos: makeProgress('videos', $('vLoading')) };
-
-// ---------- Gemini (with retries for 503/429) ----------
-async function callGemini(payload) {
-    if (!API_KEY) throw new Error('Add your Gemini API key at the top of script.js.');
-    let last;
-    for (let a = 1; a <= MAX_ATTEMPTS; a++) {
-        try {
-            const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-            });
-            if (!r.ok) {
-                let d = ''; try { d = (await r.json()).error?.message || ''; } catch { }
-                const e = new Error(`API error ${r.status}${d ? ': ' + d : ''}`); e.status = r.status; throw e;
-            }
-            const text = (await r.json()).candidates?.[0]?.content?.parts?.[0]?.text;
-            if (!text) throw new Error('The AI returned an empty response. Try again.');
-            return text;
-        } catch (e) {
-            last = e;
-            if (!(RETRY.includes(e.status) || e instanceof TypeError) || a === MAX_ATTEMPTS) break;
-            await sleep(2000 * 2 ** (a - 1) + Math.random() * 500);
-        }
-    }
-    throw last?.status === 503 ? new Error("Google's AI servers are busy. Try again in a minute.") : last;
-}
-const sourceParts = () => src.text !== undefined ? [{ text: 'STUDY MATERIAL:\n' + src.text }] : [{ inlineData: { mimeType: src.mime, data: src.b64 } }];
-
-// One job = progress bar + request + result, ignoring stale results
-async function job(name, id, empty, request, onOk) {
-    if (!src) return;
-    hide(empty); P[name].start();
-    try {
-        const out = await request(); if (id !== uploadId) return;
-        onOk(out); P[name].finish();
-    } catch (e) {
-        if (id !== uploadId) return;
-        P[name].stop(); console.error(e); toast(e.message || 'Something went wrong.'); show(empty, 'flex');
-    }
-}
-const ask = (text, schema) => callGemini({
-    contents: [{ role: 'user', parts: [{ text }, ...sourceParts()] }],
-    ...(schema ? { generationConfig: { responseMimeType: 'application/json', responseSchema: schema } } : {})
-});
-
-// ---------- Tabs ----------
-const T = { reviewer: $('tabReviewer'), quiz: $('tabQuiz'), videos: $('tabVideos') };
-function switchTab(tab) {
-    document.querySelectorAll('[data-tab]').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-    $('seg').style.setProperty('--i', Object.keys(T).indexOf(tab));
-    Object.entries(T).forEach(([n, el]) => {
-        if (n === tab) { show(el, 'flex'); el.classList.remove('tab-in'); void el.offsetWidth; el.classList.add('tab-in'); } else hide(el, 'flex');
-    });
-}
-document.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
-
-// ---------- Files ----------
-const EXT = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', heic: 'image/heic', heif: 'image/heif' };
-function kindOf(f) {
-    const x = (f.name.split('.').pop() || '').toLowerCase();
-    if (EXT[x]) return ['image', EXT[x]]; if (f.type.startsWith('image/')) return ['image', f.type];
-    if (x === 'pdf' || f.type === 'application/pdf') return ['pdf', 'application/pdf'];
-    if (x === 'docx') return ['docx']; if (x === 'txt' || x === 'md' || f.type === 'text/plain') return ['text'];
-    return null;
-}
-const readURL = (f) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(new Error('Could not read that file.')); r.readAsDataURL(f); });
-function shrink(url, max = 1600) { // smaller image = faster upload and faster AI
-    const raw = { mime: url.slice(5, url.indexOf(';')), b64: url.split(',')[1] };
-    return new Promise(res => {
-        const i = new Image(); i.onerror = () => res(raw);
-        i.onload = () => {
-            try {
-                const s = Math.min(1, max / Math.max(i.width, i.height)), c = document.createElement('canvas');
-                c.width = Math.round(i.width * s); c.height = Math.round(i.height * s);
-                const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(i, 0, 0, c.width, c.height);
-                res({ mime: 'image/jpeg', b64: c.toDataURL('image/jpeg', 0.85).split(',')[1] });
-            } catch { res(raw); }
+        const newUser = {
+            name,
+            email,
+            password,
+            provider: 'Standard Account',
+            university: 'Batangas State University - Alangilan',
+            program,
+            bio: 'Turning static lecture notes into active recall mastery.'
         };
-        i.src = url;
-    });
-}
-const fmtSize = (b) => b < 1048576 ? `${Math.max(1, Math.round(b / 1024))} KB` : `${(b / 1048576).toFixed(1)} MB`;
-
-async function handleFile(file) {
-    if (!file) return;
-    const info = kindOf(file);
-    if (!info) return toast('Unsupported file. Use an image, PDF, Word (.docx) or text file.');
-    if (file.size > MAX_FILE_BYTES) return toast('That file is larger than 10MB.');
-    resetResults(); const id = uploadId;
-    try {
-        let s, card = true;
-        if (info[0] === 'image') {
-            const url = await readURL(file);
-            $('imagePreview').src = url; show($('imagePreview')); hide($('fileCard'), 'flex'); card = false;
-            s = /hei[cf]/.test(info[1]) ? { mime: info[1], b64: url.split(',')[1] } : await shrink(url);
-        } else if (info[0] === 'pdf') { s = { mime: info[1], b64: (await readURL(file)).split(',')[1] }; }
-        else if (info[0] === 'docx') {
-            if (!window.mammoth) throw new Error('Word support did not load. Check your connection and reload.');
-            s = { text: (await window.mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() })).value };
-        } else { s = { text: await file.text() }; }
-        if (s.text !== undefined) { s.text = s.text.trim().slice(0, MAX_TEXT_CHARS); if (!s.text) throw new Error('No readable text found in that file.'); }
-        if (id !== uploadId) return;
-        if (card) {
-            hide($('imagePreview')); show($('fileCard'), 'flex');
-            $('fileIcon').textContent = { pdf: '📕', docx: '📘', text: '📝' }[info[0]];
-            $('fileName').textContent = file.name; $('fileMeta').textContent = `${info[0].toUpperCase()} · ${fmtSize(file.size)}`;
-        }
-        src = s; hide($('uploadArea')); show($('previewBox'), 'flex');
-        ['genReviewerBtn', 'genQuizBtn', 'genVideosBtn'].forEach(b => $(b).disabled = false);
-        switchTab('reviewer'); genReviewer(id); genQuiz(id); genVideos(id); // all three run in parallel
-    } catch (e) { console.error(e); toast(e.message || 'Could not read that file.'); $('fileInput').value = ''; }
-}
-$('fileInput').addEventListener('change', e => handleFile(e.target.files[0]));
-const drop = $('uploadArea');
-['dragenter', 'dragover', 'dragleave', 'drop'].forEach(n => drop.addEventListener(n, e => { e.preventDefault(); e.stopPropagation(); }));
-drop.addEventListener('drop', e => handleFile(e.dataTransfer.files[0]));
-
-function resetResults() {
-    uploadId++; Object.values(P).forEach(p => p.stop());
-    reviewerHTML = ''; quizData = null; answers = {}; videosData = null;
-    $('rvBox').innerHTML = ''; hide($('rvBox')); show($('rvEmpty'), 'flex'); hide($('saveBar'), 'flex');
-    $('qWrap').innerHTML = ''; hide($('quizBox'), 'flex'); show($('quizEmpty'), 'flex'); hide($('scoreBox')); show($('submitBtn'));
-    $('submitBtn').disabled = true; $('vBox').innerHTML = ''; hide($('vBox'), 'flex'); show($('vEmpty'), 'flex');
-}
-$('clearBtn').addEventListener('click', () => {
-    resetResults(); src = null; $('fileInput').value = ''; hide($('previewBox'), 'flex'); show($('uploadArea'));
-    ['genReviewerBtn', 'genQuizBtn', 'genVideosBtn'].forEach(b => $(b).disabled = true); switchTab('reviewer');
-});
-
-// ---------- Reviewer ----------
-function genReviewer(id = uploadId) {
-    return job('reviewer', id, $('rvEmpty'),
-        () => ask('Analyze the provided study material (photo, PDF or text). Extract key concepts and definitions. Format as a concise HTML study guide using <h3>, <ul>, <li>, <p>, <strong>. No markdown and no code fences.'),
-        (t) => {
-            reviewerHTML = clean(t.replace(/^```(?:html)?\s*/i, '').replace(/```\s*$/i, '').trim());
-            $('rvBox').innerHTML = reviewerHTML; show($('rvBox')); show($('saveBar'), 'flex');
-        });
-}
-
-// ---------- Quiz ----------
-const QUIZ_SCHEMA = { type: 'ARRAY', items: { type: 'OBJECT', properties: { question: { type: 'STRING' }, options: { type: 'ARRAY', items: { type: 'STRING' } }, correctAnswerIndex: { type: 'INTEGER' }, explanation: { type: 'STRING' } }, required: ['question', 'options', 'correctAnswerIndex', 'explanation'] } };
-function genQuiz(id = uploadId) {
-    return job('quiz', id, $('quizEmpty'),
-        async () => parseJSON(await ask('Generate exactly 5 multiple-choice questions (4 options each) based ONLY on the legible content of the provided material.', QUIZ_SCHEMA)).slice(0, 5),
-        (data) => {
-            if (!data.length) throw new Error('No questions were generated.');
-            quizData = data; answers = {};
-            $('qWrap').innerHTML = data.map((q, i) => `<div class="qcard"><p class="font-semibold t1"><span style="color:var(--blue)">${i + 1}.</span> ${esc(q.question)}</p>` +
-                q.options.map((o, j) => `<label class="opt"><input type="radio" name="q_${i}" value="${j}"><span>${esc(o)}</span></label>`).join('') +
-                `<div class="expl hidden"><b>Explanation:</b> <span class="t2">${esc(q.explanation)}</span></div></div>`).join('');
-            $('scoreTotal').textContent = data.length; hide($('scoreBox')); show($('submitBtn')); $('submitBtn').disabled = true;
-            show($('quizBox'), 'flex'); stagger($('qWrap'));
-        });
-}
-$('qWrap').addEventListener('change', (e) => {
-    const r = e.target; if (r.type !== 'radio') return;
-    answers[+r.name.slice(2)] = +r.value;
-    r.closest('.qcard').querySelectorAll('.opt').forEach(o => o.classList.toggle('sel', o.contains(r)));
-    $('submitBtn').disabled = Object.keys(answers).length !== quizData.length;
-});
-$('submitBtn').addEventListener('click', () => {
-    let score = 0;
-    [...$('qWrap').children].forEach((card, i) => {
-        const q = quizData[i], ok = answers[i] === q.correctAnswerIndex; if (ok) score++;
-        card.querySelectorAll('input').forEach(r => r.disabled = true);
-        card.querySelectorAll('.opt').forEach((o, j) => { o.classList.remove('sel'); o.classList.add('done'); if (j === q.correctAnswerIndex) o.classList.add('ok'); else if (j === answers[i]) o.classList.add('bad'); });
-        card.querySelector('.expl').classList.remove('hidden');
-    });
-    $('scoreVal').textContent = score; hide($('submitBtn')); show($('scoreBox'));
-});
-
-// ---------- Videos ----------
-const VID_SCHEMA = { type: 'OBJECT', properties: { topic: { type: 'STRING' }, suggestions: { type: 'ARRAY', items: { type: 'OBJECT', properties: { title: { type: 'STRING' }, query: { type: 'STRING' }, reason: { type: 'STRING' } }, required: ['title', 'query', 'reason'] } } }, required: ['topic', 'suggestions'] };
-async function ytLookup(query) {
-    if (!YT_API_KEY) return null;
-    const p = new URLSearchParams({ part: 'snippet', type: 'video', maxResults: '1', q: query, safeSearch: 'strict', videoEmbeddable: 'true', key: YT_API_KEY });
-    const r = await fetch('https://www.googleapis.com/youtube/v3/search?' + p);
-    if (!r.ok) { const e = new Error('YouTube API error ' + r.status); e.status = r.status; throw e; }
-    const v = (await r.json()).items?.[0]; if (!v?.id?.videoId) return null;
-    const th = v.snippet.thumbnails || {};
-    return { id: v.id.videoId, title: decode(v.snippet.title), channel: decode(v.snippet.channelTitle), thumb: (th.medium || th.default || {}).url || '' };
-}
-const videoHref = (it) => it.video ? `https://www.youtube.com/watch?v=${encodeURIComponent(it.video.id)}` : 'https://www.youtube.com/results?search_query=' + encodeURIComponent(it.query);
-function genVideos(id = uploadId) {
-    return job('videos', id, $('vEmpty'),
-        async () => {
-            const d = parseJSON(await ask('Identify the main topic of the provided study material and suggest 4 YouTube videos that would help the student learn it. For each give a short title, a YouTube search query (3-8 specific words) and one sentence on why it helps. Cover different angles.', VID_SCHEMA));
-            d.suggestions = (d.suggestions || []).slice(0, 4); let warned = false; const seen = new Set();
-            const res = await Promise.all(d.suggestions.map(s => ytLookup(s.query).catch(e => { if (!warned) { warned = true; toast(e.status === 403 ? 'YouTube quota or key problem. Showing search links.' : 'Could not load videos. Showing search links.'); } return null; })));
-            d.suggestions.forEach((s, i) => { if (res[i] && !seen.has(res[i].id)) { seen.add(res[i].id); s.video = res[i]; } });
-            if (!d.suggestions.length) throw new Error('No video suggestions were generated.');
-            return d;
-        },
-        (d) => {
-            videosData = d;
-            $('vBox').innerHTML = `<div><h2 class="text-xl font-bold t1">Videos to watch</h2><p class="text-sm t2 mt-1">Topic: ${esc(d.topic)}</p></div>` + d.suggestions.map(it => {
-                const v = it.video, h = esc(videoHref(it));
-                return `<div class="vcard">${v?.thumb ? `<a class="vthumb" href="${h}" target="_blank" rel="noopener noreferrer"><img src="${esc(v.thumb)}" alt="" loading="lazy"></a>` : ''}
-                <div class="flex flex-col min-w-0 flex-grow"><h3 class="font-semibold t1">${esc(v ? v.title : it.title)}</h3>${v ? `<p class="text-xs t2 mt-0.5">${esc(v.channel)}</p>` : ''}
-                <p class="text-sm t2 mt-2">${esc(it.reason)}</p><a class="btn btn-red btn-sm mt-3 self-start" href="${h}" target="_blank" rel="noopener noreferrer">${v ? 'Watch on YouTube' : 'Search on YouTube'}</a></div></div>`;
-            }).join('');
-            show($('vBox'), 'flex'); stagger($('vBox'));
-        });
-}
-$('genReviewerBtn').addEventListener('click', () => genReviewer());
-$('genQuizBtn').addEventListener('click', () => genQuiz());
-$('genVideosBtn').addEventListener('click', () => genVideos());
-
-// ---------- Theme, drawer, navigation ----------
-function applyTheme(dark) { document.documentElement.classList.toggle('dark', dark); $('themeIcon').textContent = dark ? '☀️' : '🌙'; }
-applyTheme(localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches);
-$('themeBtn').addEventListener('click', () => {
-    const dark = !document.documentElement.classList.contains('dark'); applyTheme(dark);
-    try { localStorage.setItem('theme', dark ? 'dark' : 'light'); } catch { }
-    $('themeIcon').animate([{ transform: 'rotate(-120deg) scale(.4)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 500, easing: 'cubic-bezier(.34,1.56,.64,1)' });
-});
-const setDrawer = (open) => { $('drawer').classList.toggle('open', open); $('drawerOverlay').classList.toggle('open', open); };
-$('hamburgerBtn').addEventListener('click', () => setDrawer(true));
-$('drawerOverlay').addEventListener('click', () => setDrawer(false));
-
-function go(view) {
-    const home = view === 'home', shown = home ? $('viewHome') : $('viewSubjects');
-    hide(home ? $('viewSubjects') : $('viewHome')); show(shown);
-    shown.classList.remove('view-in'); void shown.offsetWidth; shown.classList.add('view-in');
-    $('bottomNav').dataset.active = view;
-    $('navHome').classList.toggle('active', home); $('navSubjects').classList.toggle('active', !home);
-    if (!home) { openSub = null; renderSubjects(); }
-    scrollTo({ top: 0, behavior: 'smooth' });
-}
-$('navHome').addEventListener('click', () => go('home'));
-$('navSubjects').addEventListener('click', () => go('subjects'));
-
-// ---------- Subjects: add / rename / delete ----------
-const saveSubjects = () => store.set('edu_subjects', subjects), saveMaterials = () => store.set('edu_materials', materials);
-function renderSubjects() {
-    hide($('subjectDetail')); show($('subjectsGrid'));
-    const g = $('subjectsGrid');
-    g.innerHTML = subjects.map(s => {
-        const n = materials.filter(m => m.subject === s).length;
-        return `<div class="card sub-card" data-open="${esc(s)}"><div class="flex justify-between items-start mb-3"><div class="bubble">📚</div>
-        <div class="flex gap-1"><button class="icon-btn" data-edit="${esc(s)}" aria-label="Rename ${esc(s)}">✏️</button><button class="icon-btn danger" data-del="${esc(s)}" aria-label="Delete ${esc(s)}">🗑️</button></div></div>
-        <h3 class="text-lg font-bold t1">${esc(s)}</h3><p class="text-sm t2 mt-1">${n} saved ${n === 1 ? 'material' : 'materials'}</p></div>`;
-    }).join('') || '<p class="t2">No subjects yet. Tap “+ New Subject”.</p>';
-    stagger(g);
-}
-$('subjectsGrid').addEventListener('click', (e) => {
-    const ed = e.target.closest('[data-edit]'), de = e.target.closest('[data-del]'), op = e.target.closest('[data-open]');
-    if (ed) return openSubModal(ed.dataset.edit);
-    if (de) {
-        const s = de.dataset.del, n = materials.filter(m => m.subject === s).length;
-        if (confirm(`Delete “${s}”${n ? ` and its ${n} saved material${n > 1 ? 's' : ''}` : ''}? This can't be undone.`)) {
-            subjects = subjects.filter(x => x !== s); materials = materials.filter(m => m.subject !== s); saveSubjects(); saveMaterials(); renderSubjects(); toast('Subject deleted.', true);
-        }
-        return;
+        registeredUsers.push(newUser);
+        localStorage.setItem('edumaxxing_users', JSON.stringify(registeredUsers));
+        loginSuccess(newUser);
+    } else {
+        const user = registeredUsers.find(u => u.email === email && u.password === password);
+        if (!user) return showToast('Invalid email or password.');
+        loginSuccess(user);
     }
-    if (op) openSubject(op.dataset.open);
 });
-function openSubModal(name = null) {
-    editingSub = name; $('subModalTitle').textContent = name ? 'Rename Subject' : 'New Subject'; $('subOk').textContent = name ? 'Save' : 'Create';
-    $('subInput').value = name || ''; openModal($('subModal')); setTimeout(() => $('subInput').focus(), 250);
-}
-function submitSubject() {
-    const v = $('subInput').value.trim(); if (!v) return;
-    if (subjects.some(s => s.toLowerCase() === v.toLowerCase() && s !== editingSub)) return toast('That subject already exists.');
-    if (editingSub) {
-        subjects = subjects.map(s => s === editingSub ? v : s); materials.forEach(m => { if (m.subject === editingSub) m.subject = v; });
-        if (openSub === editingSub) { openSub = v; $('detailTitle').textContent = v; } saveMaterials();
-    } else subjects.push(v);
-    saveSubjects(); closeModal($('subModal')); openSub ? openSubject(openSub) : renderSubjects();
-}
-$('newSubjectBtn').addEventListener('click', () => openSubModal());
-$('subCancel').addEventListener('click', () => closeModal($('subModal')));
-$('subOk').addEventListener('click', submitSubject);
-$('subInput').addEventListener('keydown', e => { if (e.key === 'Enter') submitSubject(); });
 
-// ---------- Saved materials: view / delete ----------
-function openSubject(s) {
-    openSub = s; hide($('subjectsGrid')); show($('subjectDetail')); $('detailTitle').textContent = s;
-    const items = materials.filter(m => m.subject === s).reverse(), list = $('savedList');
-    list.innerHTML = items.map(m => `<div class="item-row"><div class="min-w-0"><p class="font-bold t1">Study Session</p><p class="text-sm t2">${esc(m.date)} · ${[m.reviewerHTML && 'Reviewer', m.quizData?.length && 'Quiz', m.videos?.suggestions?.length && 'Videos'].filter(Boolean).join(' + ') || 'Empty'}</p></div>
-        <div class="flex gap-2"><button class="btn btn-sm btn-soft" data-view="${m.id}">View</button><button class="btn btn-sm btn-tint" data-rm="${m.id}">Delete</button></div></div>`).join('') || '<p class="t2">No materials saved yet. Generate one on Home and tap “Save to Subject”.</p>';
-    stagger(list);
-}
-$('savedList').addEventListener('click', (e) => {
-    const v = e.target.closest('[data-view]'), r = e.target.closest('[data-rm]');
-    if (v) viewMaterial(materials.find(m => m.id === +v.dataset.view));
-    if (r && confirm('Delete this saved material?')) { materials = materials.filter(m => m.id !== +r.dataset.rm); saveMaterials(); openSubject(openSub); }
+// Google Sign-In Flow
+googleSignInBtn.addEventListener('click', () => {
+    const googleUsers = registeredUsers.filter(u => u.provider === 'Google Account');
+    if (googleUsers.length > 0) {
+        googleSavedAccountsList.innerHTML = `<p class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Saved Google Accounts</p>` +
+            googleUsers.map(u => `
+                <button type="button" onclick="quickGoogleLogin('${u.email}')" class="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-[#2c2c2e] border border-gray-200 dark:border-gray-700 text-left transition-colors">
+                    <div class="w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0">${u.name.charAt(0).toUpperCase()}</div>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">${u.name}</p>
+                        <p class="text-xs text-gray-500 truncate">${u.email}</p>
+                    </div>
+                </button>
+            `).join('');
+    } else {
+        googleSavedAccountsList.innerHTML = '';
+    }
+    googleNameInput.value = '';
+    googleEmailInput.value = '';
+    openModal(googleModalOverlay);
 });
-$('backBtn').addEventListener('click', () => { openSub = null; renderSubjects(); });
-function viewMaterial(m) {
-    if (!m) return;
-    let h = m.reviewerHTML ? `<div class="reviewer">${clean(m.reviewerHTML)}</div>` : '';
-    if (m.quizData?.length) h += '<h3 class="sec t1">Quiz</h3>' + m.quizData.map((q, i) => `<div class="qcard mb-3"><p class="font-semibold t1">${i + 1}. ${esc(q.question)}</p>${q.options.map((o, j) => `<div class="opt done ${j === q.correctAnswerIndex ? 'ok' : ''}">${esc(o)}</div>`).join('')}<div class="expl"><b>Why:</b> <span class="t2">${esc(q.explanation)}</span></div></div>`).join('');
-    if (m.videos?.suggestions?.length) h += '<h3 class="sec t1">Videos</h3>' + m.videos.suggestions.map(it => `<a class="vcard mb-3" href="${esc(videoHref(it))}" target="_blank" rel="noopener noreferrer"><div class="min-w-0"><p class="font-semibold t1">${esc(it.video ? it.video.title : it.title)}</p><p class="text-sm t2 mt-1">${esc(it.reason)}</p></div></a>`).join('');
-    $('viewTitle').textContent = `${m.subject} · ${m.date}`; $('viewBody').innerHTML = h || '<p class="t2">Nothing saved in this session.</p>'; openModal($('viewModal'));
-}
-$('viewClose').addEventListener('click', () => closeModal($('viewModal')));
-$('viewModal').addEventListener('click', e => { if (e.target === $('viewModal')) closeModal($('viewModal')); });
 
-// ---------- Save current results ----------
-$('openSaveBtn').addEventListener('click', () => {
-    if (!subjects.length) { toast('Create a subject first.'); return go('subjects'); }
-    $('saveSelect').innerHTML = subjects.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join(''); openModal($('saveModal'));
-});
-$('saveCancel').addEventListener('click', () => closeModal($('saveModal')));
-$('saveOk').addEventListener('click', () => {
-    const subject = $('saveSelect').value;
-    materials.push({ id: Date.now(), subject, date: new Date().toLocaleDateString(), reviewerHTML, quizData, videos: videosData });
-    saveMaterials(); closeModal($('saveModal')); toast(`Saved to ${subject}.`, true);
-});
-['subModal', 'saveModal'].forEach(id => $(id).addEventListener('click', e => { if (e.target === $(id)) closeModal($(id)); }));
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { document.querySelectorAll('.modal.open').forEach(closeModal); setDrawer(false); } });
+window.quickGoogleLogin = function(email) {
+    const user = registeredUsers.find(u => u.email === email);
+    if (user) {
+        closeModal(googleModalOverlay);
+        loginSuccess(user);
+    }
+};
 
-renderSubjects();
+$('cancelGoogleBtn').addEventListener('click', () => closeModal(googleModalOverlay));
+$('confirmGoogleBtn').addEventListener('click', () => {
+    const name = googleNameInput.value.trim();
+    const email = googleEmailInput.value.trim().toLowerCase();
+    if (!name || !email || !email.includes('@')) {
+        return showToast('Please enter a valid name and Google email.');
+    }
+    let user = registeredUsers.find(u => u.email === email);
+    if (!user) {
+        user = {
+            name,
+            email,
+            password: '',
+            provider: 'Google Account',
+            university: 'Batangas State University - Alangilan',
+            program: 'BS Computer Science',
+            bio: 'Streamlining study sessions with AI.'
+        };
+        registeredUsers.push(user);
+        localStorage.setItem('edumaxxing_users', JSON.stringify(registeredUsers));
+    }
+    closeModal(googleModalOverlay);
+    loginSuccess(user);
+});
+
+function loginSuccess(user) {
+    currentUser = user;
+    localStorage.setItem('edumaxxing_current_user', JSON.stringify(currentUser));
+    loadUserData();
+    showWelcomeScreen();
+    showToast(`Signed in as ${user.name}`);
+}
+
+function showAuthScreen() {
+    authScreen.classList.remove('hidden');
+    welcomeScreen.classList.add('hidden');
+    welcomeScreen.classList.remove('flex');
+    mainAppWrapper.classList.add('hidden');
+    mainAppWrapper.classList.remove('flex');
+}
+
+function showWelcomeScreen() {
+    authScreen.classList.add('hidden');
+    mainAppWrapper.classList.add('hidden');
+    mainAppWrapper.classList.remove('flex');
+    welcomeScreen.classList.remove('hidden');
+    welcomeScreen.classList.add('flex');
+
+    welcomeAvatar.textContent = currentUser.name.charAt(0).toUpperCase();
+    welcomeUserName.textContent = currentUser.name.split(' ')[0];
+}
+
+startGeneratingBtn.addEventListener('click', () => {
+    welcomeScreen.classList.add('hidden');
+    welcomeScreen.classList.remove('flex');
+    mainAppWrapper.classList.remove('hidden');
+    mainAppWrapper.classList.add('flex');
+    switchMainView('home');
+});
+
+function logoutUser() {
+    currentUser = null;
+    localStorage.removeItem('edumaxxing_current_user');
+    closeSideDrawer();
+    fullReset();
+    showAuthScreen();
+    showToast('Signed out of your account.');
+}
+
+$('drawerLogoutBtn').addEventListener('click', logoutUser);
+$('profileSignOutBtn').addEventListener('click', logoutUser);
+
+// ==========================================
+// PER-USER LOCALSTORAGE SYNC & STATS
+// ==========================================
+function getSubjectsKey() { return `edumaxxing_subjects_${currentUser.email}`; }
+function getMaterialsKey() { return `edumaxxing_materials_${currentUser.email}`; }
+function getStatsKey() { return `edumaxxing_stats_${currentUser.email}`; }
+
+function loadUserData() {
+    if (!currentUser) return;
+    savedSubjects = JSON.parse(localStorage.getItem(getSubjectsKey())) || ["Computer Science 101", "Data Structures"];
+    savedMaterials = JSON.parse(localStorage.getItem(getMaterialsKey())) || [];
+    userStats = JSON.parse(localStorage.getItem(getStatsKey())) || { uploads: 0, quizzesGraded: 0 };
+    syncUserUI();
+    renderSubjectsGrid();
+}
+
+function syncUserStorage() {
+    if (!currentUser) return;
+    localStorage.setItem(getSubjectsKey(), JSON.stringify(savedSubjects));
+    localStorage.setItem(getMaterialsKey(), JSON.stringify(savedMaterials));
+    localStorage.setItem(getStatsKey(), JSON.stringify(userStats));
+    syncUserUI();
+}
+
+function syncUserUI() {
+    if (!currentUser) return;
+    const initial = currentUser.name.charAt(0).toUpperCase();
+
+    // Header & Drawer
+    $('headerAvatar').textContent = initial;
+    $('headerUserName').textContent = currentUser.name;
+    $('drawerAvatar').textContent = initial;
+    $('drawerUserName').textContent = currentUser.name;
+    $('drawerUserEmail').textContent = currentUser.email;
+
+    // Dashboard Stats Row
+    $('statSubjectsCount').textContent = savedSubjects.length;
+    $('statReviewersCount').textContent = savedMaterials.length;
+    $('statUploadsCount').textContent = userStats.uploads;
+
+    // Personal Info Dashboard
+    $('profileBigAvatar').textContent = initial;
+    $('profileHeroName').textContent = currentUser.name;
+    $('profileHeroEmail').textContent = currentUser.email;
+    $('profileAuthBadge').textContent = currentUser.provider || 'Standard Account';
+    $('profileHeroMeta').textContent = `${currentUser.university || 'University Student'} · ${currentUser.program || 'General Studies'}`;
+
+    $('profileStatSubjects').textContent = savedSubjects.length;
+    $('profileStatReviewers').textContent = savedMaterials.length;
+    $('profileStatUploads').textContent = userStats.uploads;
+    $('profileStatQuizzes').textContent = userStats.quizzesGraded;
+
+    $('piNameInput').value = currentUser.name || '';
+    $('piEmailInput').value = currentUser.email || '';
+    $('piUniversityInput').value = currentUser.university || '';
+    $('piProgramInput').value = currentUser.program || '';
+    $('piBioInput').value = currentUser.bio || '';
+}
+
+// Save Personal Info Changes
+$('personalInfoForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (!currentUser) return;
+    currentUser.name = $('piNameInput').value.trim() || currentUser.name;
+    currentUser.university = $('piUniversityInput').value.trim();
+    currentUser.program = $('piProgramInput').value.trim();
+    currentUser.bio = $('piBioInput').value.trim();
+
+    localStorage.setItem('edumaxxing_current_user', JSON.stringify(currentUser));
+    const idx = registeredUsers.findIndex(u => u.email === currentUser.email);
+    if (idx !== -1) {
+        registeredUsers[idx] = { ...registeredUsers[idx], ...currentUser };
+        localStorage.setItem('edumaxxing_users', JSON.stringify(registeredUsers));
+    }
+    syncUserUI();
+    showToast('Personal info updated!');
+});
+
+// ==========================================
+// NAVIGATION (BOTTOM PILL & SIDE DRAWER)
+// ==========================================
+function switchMainView(view) {
+    viewHome.classList.toggle('hidden', view !== 'home');
+    viewSubjects.classList.toggle('hidden', view !== 'subjects');
+    viewProfile.classList.toggle('hidden', view !== 'profile');
+
+    const navMap = {
+        home: navHomeBtn,
+        subjects: navSubjectsBtn,
+        profile: navProfileBtn
+    };
+
+    Object.entries(navMap).forEach(([key, btn]) => {
+        if (key === view) {
+            btn.classList.remove('text-gray-400', 'dark:text-gray-500');
+            btn.classList.add('text-blue-500');
+        } else {
+            btn.classList.remove('text-blue-500');
+            btn.classList.add('text-gray-400', 'dark:text-gray-500');
+        }
+    });
+
+    if (view === 'subjects') renderSubjectsGrid();
+    if (view === 'profile') syncUserUI();
+}
+
+navHomeBtn.addEventListener('click', () => switchMainView('home'));
+navSubjectsBtn.addEventListener('click', () => switchMainView('subjects'));
+navProfileBtn.addEventListener('click', () => switchMainView('profile'));
+$('headerProfileChip').addEventListener('click', () => switchMainView('profile'));
+$('quickJumpSubjects').addEventListener('click', () => switchMainView('subjects'));
+
+// Side Drawer
+hamburgerBtn.addEventListener('click', () => {
+    sideMenuOverlay.classList.remove('hidden');
+    setTimeout(() => {
+        sideMenuOverlay.classList.remove('opacity-0');
+        sideMenuDrawer.classList.remove('-translate-x-full');
+    }, 10);
+});
+
+function closeSideDrawer() {
+    sideMenuOverlay.classList.add('opacity-0');
+    sideMenuDrawer.classList.add('-translate-x-full');
+    setTimeout(() => sideMenuOverlay.classList.add('hidden'), 300);
+}
+
+sideMenuOverlay.addEventListener('click', closeSideDrawer);
+$('drawerDashboardBtn').addEventListener('click', () => { closeSideDrawer(); switchMainView('home'); });
+$('drawerSubjectsBtn').addEventListener('click', () => { closeSideDrawer(); switchMainView('subjects'); });
+$('drawerProfileBtn').addEventListener('click', () => { closeSideDrawer(); switchMainView('profile'); });
+$('drawerHelpBtn').addEventListener('click', () => {
+    closeSideDrawer();
+    showToast('Upload a file on the Dashboard to generate an AI Reviewer, Quiz, and Videos.');
+});
+
+// ==========================================
+// SUBJECTS CRUD & SAVING SESSIONS
+// ==========================================
+function openModal(overlay) {
+    overlay.classList.remove('hidden');
+    setTimeout(() => {
+        overlay.classList.remove('opacity-0');
+        overlay.firstElementChild.classList.remove('scale-95');
+    }, 10);
+}
+
+function closeModal(overlay) {
+    overlay.classList.add('opacity-0');
+    overlay.firstElementChild.classList.add('scale-95');
+    setTimeout(() => overlay.classList.add('hidden'), 250);
+}
+
+// Add Subject
+$('addNewSubjectBtn').addEventListener('click', () => {
+    newSubjectInput.value = '';
+    openModal(addSubjectModalOverlay);
+    setTimeout(() => newSubjectInput.focus(), 50);
+});
+$('cancelAddSubjectBtn').addEventListener('click', () => closeModal(addSubjectModalOverlay));
+$('confirmAddSubjectBtn').addEventListener('click', submitNewSubject);
+newSubjectInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') submitNewSubject(); });
+
+function submitNewSubject() {
+    const sub = newSubjectInput.value.trim();
+    if (!sub) return;
+    if (savedSubjects.includes(sub)) return showToast('Subject already exists.');
+    savedSubjects.push(sub);
+    syncUserStorage();
+    renderSubjectsGrid();
+    closeModal(addSubjectModalOverlay);
+    showToast(`Created "${sub}"`);
+}
+
+// Edit Subject
+window.openEditSubjectModal = function(subject, event) {
+    event.stopPropagation();
+    subjectToEdit = subject;
+    editSubjectInput.value = subject;
+    openModal(editSubjectModalOverlay);
+    setTimeout(() => editSubjectInput.focus(), 50);
+};
+$('cancelEditSubjectBtn').addEventListener('click', () => closeModal(editSubjectModalOverlay));
+$('confirmEditSubjectBtn').addEventListener('click', submitEditSubject);
+editSubjectInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') submitEditSubject(); });
+
+function submitEditSubject() {
+    const newName = editSubjectInput.value.trim();
+    if (!newName || newName === subjectToEdit) return closeModal(editSubjectModalOverlay);
+    if (savedSubjects.includes(newName)) return showToast('Subject already exists.');
+
+    const idx = savedSubjects.indexOf(subjectToEdit);
+    if (idx !== -1) savedSubjects[idx] = newName;
+    savedMaterials.forEach(m => { if (m.subject === subjectToEdit) m.subject = newName; });
+
+    syncUserStorage();
+    renderSubjectsGrid();
+    closeModal(editSubjectModalOverlay);
+    showToast('Subject renamed.');
+}
+
+// Delete Subject
+window.openDeleteSubjectModal = function(subject, event) {
+    event.stopPropagation();
+    subjectToDelete = subject;
+    openModal(deleteSubjectModalOverlay);
+};
+$('cancelDeleteSubjectBtn').addEventListener('click', () => closeModal(deleteSubjectModalOverlay));
+$('confirmDeleteSubjectBtn').addEventListener('click', () => {
+    if (!subjectToDelete) return;
+    savedSubjects = savedSubjects.filter(s => s !== subjectToDelete);
+    savedMaterials = savedMaterials.filter(m => m.subject !== subjectToDelete);
+    syncUserStorage();
+    renderSubjectsGrid();
+    closeModal(deleteSubjectModalOverlay);
+    showToast('Subject deleted.');
+});
+
+// Save Material Modal
+openSaveModalBtn.addEventListener('click', () => {
+    saveSubjectSelect.innerHTML = savedSubjects.map(s => `<option value="${s}">${s}</option>`).join('');
+    saveTitleInput.value = currentUploadedFileName ? currentUploadedFileName.replace(/\.[^/.]+$/, '') : 'Study Session';
+    openModal(saveModalOverlay);
+});
+$('cancelSaveBtn').addEventListener('click', () => closeModal(saveModalOverlay));
+$('confirmSaveBtn').addEventListener('click', () => {
+    const targetSubject = saveSubjectSelect.value;
+    const title = saveTitleInput.value.trim() || 'Study Session';
+    const newMaterial = {
+        id: Date.now(),
+        title,
+        subject: targetSubject,
+        date: new Date().toLocaleDateString(),
+        reviewerHTML: currentGeneratedReviewerHTML,
+        quizData: generatedQuizData
+    };
+    savedMaterials.push(newMaterial);
+    syncUserStorage();
+    closeModal(saveModalOverlay);
+    showToast(`Saved to ${targetSubject}!`);
+});
+
+function renderSubjectsGrid() {
+    const grid = $('subjectsGrid');
+    grid.innerHTML = savedSubjects.map(sub => {
+        const count = savedMaterials.filter(m => m.subject === sub).length;
+        const safeSub = sub.replace(/'/g, "\\'");
+        return `
+        <div onclick="openSubjectDetail('${safeSub}')" class="ios-card p-6 cursor-pointer hover:border-blue-500 border border-transparent transition-all relative group">
+            <div class="absolute top-4 right-4 flex gap-1 z-10">
+                <button onclick="openEditSubjectModal('${safeSub}', event)" class="p-2 text-gray-400 hover:text-blue-500 bg-gray-100/80 dark:bg-[#2c2c2e] rounded-full transition-colors" title="Rename">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                </button>
+                <button onclick="openDeleteSubjectModal('${safeSub}', event)" class="p-2 text-gray-400 hover:text-red-500 bg-gray-100/80 dark:bg-[#2c2c2e] rounded-full transition-colors" title="Delete">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                </button>
+            </div>
+            <div class="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400 mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
+            </div>
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white pr-16 truncate">${sub}</h3>
+            <p class="text-sm text-gray-500 mt-1">${count} Saved ${count === 1 ? 'Session' : 'Sessions'}</p>
+        </div>`;
+    }).join('');
+    $('subjectDetailView').classList.add('hidden');
+    grid.classList.remove('hidden');
+}
+
+window.openSubjectDetail = function(subject) {
+    $('subjectsGrid').classList.add('hidden');
+    $('subjectDetailView').classList.remove('hidden');
+    $('subjectDetailTitle').textContent = subject;
+
+    const items = savedMaterials.filter(m => m.subject === subject);
+    $('savedItemsList').innerHTML = items.length === 0
+        ? `<p class="text-gray-500 text-sm">No materials saved inside this subject yet.</p>`
+        : items.map(m => `
+        <div class="ios-card p-5 flex justify-between items-center border border-gray-100 dark:border-gray-800">
+            <div>
+                <p class="font-bold text-gray-900 dark:text-white">${m.title || 'Study Session'}</p>
+                <p class="text-xs text-gray-500 mt-0.5">${m.date} · ${m.quizData ? 'Reviewer + 5-Item Quiz' : 'Reviewer Only'}</p>
+            </div>
+            <button onclick="loadSavedMaterial(${m.id})" class="ios-btn ios-btn-sm ios-btn-blue">Open Session</button>
+        </div>`).join('');
+};
+
+window.loadSavedMaterial = function(id) {
+    const item = savedMaterials.find(m => m.id === id);
+    if (!item) return;
+
+    currentGeneratedReviewerHTML = item.reviewerHTML;
+    reviewerContainer.innerHTML = item.reviewerHTML;
+    hide($('reviewerEmptyState'));
+    show(reviewerContainer);
+    saveActionHeader.classList.remove('hidden');
+    $('currentSessionLabel').textContent = `${item.subject} · ${item.title || 'Saved Session'}`;
+    generateVideosBtn.disabled = false;
+
+    if (item.quizData) {
+        generatedQuizData = item.quizData;
+        renderQuizUI();
+    }
+    switchMainView('home');
+    switchTab('reviewer');
+    showToast(`Loaded "${item.title || 'Study Session'}"`);
+};
+
+$('backToSubjectsBtn').addEventListener('click', () => {
+    $('subjectDetailView').classList.add('hidden');
+    $('subjectsGrid').classList.remove('hidden');
+});
+
+// ==========================================
+// FILE HANDLING, COMPRESSION & GEMINI API
+// ==========================================
+function show(el, display = null) { el.classList.remove('hidden'); if (display) el.classList.add(display); }
+function hide(el, display = null) { el.classList.add('hidden'); if (display) el.classList.remove(display); }
+
+function switchTab(tab) {
+    const tabs = { reviewer: [btnTabReviewer, tabReviewerContent], quiz: [btnTabQuiz, tabQuizContent], videos: [btnTabVideos, tabVideosContent] };
+    Object.entries(tabs).forEach(([name, [btn, content]]) => {
+        btn.classList.toggle('active', name === tab);
+        if (name === tab) show(content, 'flex'); else hide(content, 'flex');
+    });
+}
+
+btnTabReviewer.addEventListener('click', () => switchTab('reviewer'));
+btnTabQuiz.addEventListener('click', () => switchTab('quiz'));
+btnTabVideos.addEventListener('click', () => switchTab('videos'));
+generateVideosBtn.addEventListener('click', generateVideoSuggestions);
+fileInput.addEventListener('change', handleFileSelect);
+clearBtn.addEventListener('click', fullReset);
+generateQuizBtn.addEventListener('click', generateQuizFromNotes);
+submitQuizBtn.addEventListener('click', gradeQuiz);
+
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(name => {
+    uploadArea.addEventListener(name, e => { e.preventDefault(); e.stopPropagation(); });
+});
+uploadArea.addEventListener('drop', (e) => {
+    if (e.dataTransfer.files.length > 0) {
+        fileInput.files = e.dataTransfer.files;
+        handleFileSelect({ target: fileInput });
+    }
+});
+
+function startLoadingTimer(elementId) {
+    clearInterval(loadingInterval);
+    secondsElapsed = 0;
+    const timerEl = $(elementId);
+    if (timerEl) timerEl.textContent = "00:00";
+    loadingInterval = setInterval(() => {
+        secondsElapsed++;
+        const mins = Math.floor(secondsElapsed / 60).toString().padStart(2, '0');
+        const secs = (secondsElapsed % 60).toString().padStart(2, '0');
+        if (timerEl) timerEl.textContent = `${mins}:${secs}`;
+    }, 1000);
+}
+
+function stopLoadingTimer() { clearInterval(loadingInterval); }
+
+function hasSource() { return currentText !== null || !!currentBase64Image; }
+function sourceParts() {
+    if (currentText !== null) return [{ text: 'STUDY MATERIAL:\n' + currentText }];
+    return [{ inlineData: { mimeType: currentMimeType, data: currentBase64Image } }];
+}
+
+async function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    uploadId++;
+    currentUploadedFileName = file.name;
+    saveActionHeader.classList.add('hidden');
+    currentBase64Image = null; currentMimeType = null; currentText = null;
+    currentGeneratedReviewerHTML = ""; generatedQuizData = null;
+
+    userStats.uploads++;
+    syncUserStorage();
+
+    if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width, height = img.height;
+                const MAX_SIZE = 1200;
+                if (width > height && width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
+                else if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
+                canvas.width = width; canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.65);
+
+                imagePreview.src = compressedDataUrl;
+                show(imagePreview); hide(fileCard, 'flex');
+                currentMimeType = 'image/jpeg';
+                currentBase64Image = compressedDataUrl.split(',')[1];
+                finalizeUpload(file.name, 'Compressed Image', '🖼️', true);
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    } else if (file.type === 'application/pdf') {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            currentBase64Image = e.target.result.split(',')[1];
+            currentMimeType = 'application/pdf';
+            finalizeUpload(file.name, 'PDF Document', '📕', false);
+        };
+        reader.readAsDataURL(file);
+    } else if (file.name.endsWith('.docx')) {
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await window.mammoth.extractRawText({ arrayBuffer });
+        currentText = result.value.slice(0, MAX_TEXT_CHARS);
+        finalizeUpload(file.name, 'Word Document', '📘', false);
+    } else {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            currentText = e.target.result.slice(0, MAX_TEXT_CHARS);
+            finalizeUpload(file.name, 'Text Document', '📄', false);
+        };
+        reader.readAsText(file);
+    }
+}
+
+function finalizeUpload(name, type, icon, isImg) {
+    hide(uploadArea); show(previewContainer, 'flex');
+    if (!isImg) {
+        hide(imagePreview); show(fileCard, 'flex');
+        fileName.textContent = name; fileMeta.textContent = type; fileIcon.textContent = icon;
+    }
+    generateQuizBtn.disabled = false;
+    switchTab('reviewer');
+    generateReviewerFromNotes();
+}
+
+function fullReset() {
+    fileInput.value = ''; currentBase64Image = null; currentText = null; currentGeneratedReviewerHTML = "";
+    hide(previewContainer, 'flex'); show(uploadArea);
+    reviewerContainer.innerHTML = ''; hide(reviewerContainer); show($('reviewerEmptyState'));
+    hide(quizContainer, 'flex'); show($('quizEmptyState'));
+    hide(videosContainer, 'flex'); show($('videosEmptyState'));
+    saveActionHeader.classList.add('hidden');
+    switchTab('reviewer');
+}
+
+async function callGemini(payload) {
+    if (!API_KEY || API_KEY.startsWith('PASTE_')) {
+        throw new Error('Paste your Gemini API key at the top of script.js.');
+    }
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error(`API error ${response.status}`);
+    const result = await response.json();
+    return result.candidates[0].content.parts[0].text;
+}
+
+async function generateReviewerFromNotes() {
+    if (!hasSource()) return;
+    hide($('reviewerEmptyState')); hide(reviewerContainer); show($('reviewerLoadingState'), 'flex');
+    startLoadingTimer('reviewerTimer');
+
+    const payload = {
+        contents: [{
+            role: "user",
+            parts: [
+                { text: "Analyze the study material. Extract key academic concepts and definitions. Explicitly ignore metadata like course codes, student names, or syllabus headers. Format as an HTML study guide using <h3>, <ul>, <li>, <p>, <strong>. Do not use markdown code blocks." },
+                ...sourceParts()
+            ]
+        }]
+    };
+
+    try {
+        let html = await callGemini(payload);
+        html = html.replace(/^```(?:html)?\s*/i, '').replace(/```\s*$/i, '').trim();
+        currentGeneratedReviewerHTML = html;
+        reviewerContainer.innerHTML = html;
+
+        stopLoadingTimer();
+        hide($('reviewerLoadingState'), 'flex'); show(reviewerContainer);
+        $('currentSessionLabel').textContent = currentUploadedFileName || 'Generated Session';
+        saveActionHeader.classList.remove('hidden');
+        generateVideosBtn.disabled = false;
+    } catch (error) {
+        stopLoadingTimer();
+        showToast(error.message || 'Failed to generate reviewer.');
+        hide($('reviewerLoadingState'), 'flex'); show($('reviewerEmptyState'));
+    }
+}
+
+async function generateQuizFromNotes() {
+    if (!hasSource()) return;
+    hide($('quizEmptyState')); hide(quizContainer, 'flex'); show($('quizLoadingState'), 'flex');
+    startLoadingTimer('quizTimer');
+
+    const payload = {
+        contents: [{
+            role: "user",
+            parts: [
+                { text: "Analyze the material and generate exactly 5 multiple-choice questions based ONLY on the core academic concepts, definitions, and theories presented. Explicitly IGNORE metadata such as course codes, syllabus titles, student names, dates, university names, or page numbers." },
+                ...sourceParts()
+            ]
+        }],
+        generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: "ARRAY",
+                items: {
+                    type: "OBJECT",
+                    properties: {
+                        question: { type: "STRING" },
+                        options: { type: "ARRAY", items: { type: "STRING" } },
+                        correctAnswerIndex: { type: "INTEGER" },
+                        explanation: { type: "STRING" }
+                    },
+                    required: ["question", "options", "correctAnswerIndex", "explanation"]
+                }
+            }
+        }
+    };
+
+    try {
+        const text = await callGemini(payload);
+        generatedQuizData = JSON.parse(text.replace(/```json|```/gi, '').trim()).slice(0, 5);
+        stopLoadingTimer();
+        renderQuizUI();
+    } catch (error) {
+        stopLoadingTimer();
+        showToast(error.message || 'Failed to generate quiz.');
+        hide($('quizLoadingState'), 'flex'); show($('quizEmptyState'));
+    }
+}
+
+function renderQuizUI() {
+    hide($('quizLoadingState'), 'flex'); show(quizContainer, 'flex');
+    $('questionsWrapper').innerHTML = ''; userAnswers = {};
+    show(submitQuizBtn); submitQuizBtn.disabled = true;
+    hide(scoreDisplay, 'flex');
+
+    generatedQuizData.forEach((qData, qIndex) => {
+        const block = document.createElement('div');
+        block.className = 'bg-white dark:bg-[#2c2c2e] border border-gray-100 dark:border-gray-700 rounded-xl p-5 shadow-sm ios-card';
+        block.innerHTML = `<h3 class="text-base font-semibold mb-4"><span class="text-blue-500 mr-2">${qIndex + 1}.</span> ${qData.question}</h3>`;
+
+        const optionsDiv = document.createElement('div');
+        optionsDiv.className = 'space-y-3';
+        qData.options.forEach((optText, optIndex) => {
+            const label = document.createElement('label');
+            label.className = 'quiz-option flex items-center p-3 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-black';
+            label.innerHTML = `<input type="radio" name="q_${qIndex}" value="${optIndex}" class="h-4 w-4 text-blue-600"><span class="ml-3 text-sm">${optText}</span>`;
+
+            label.querySelector('input').addEventListener('change', (e) => {
+                optionsDiv.querySelectorAll('label').forEach(l => l.classList.remove('bg-blue-50', 'dark:bg-blue-900/30', 'border-blue-400', 'ring-1', 'ring-blue-400'));
+                label.classList.add('bg-blue-50', 'dark:bg-blue-900/30', 'border-blue-400', 'ring-1', 'ring-blue-400');
+                userAnswers[qIndex] = parseInt(e.target.value, 10);
+                if (Object.keys(userAnswers).length === generatedQuizData.length) {
+                    submitQuizBtn.disabled = false;
+                }
+            });
+            optionsDiv.appendChild(label);
+        });
+        block.appendChild(optionsDiv);
+
+        const expDiv = document.createElement('div');
+        expDiv.id = `exp_${qIndex}`;
+        expDiv.className = 'hidden mt-4 p-3 bg-gray-50 dark:bg-black border-l-4 rounded-r-lg text-sm';
+        expDiv.innerHTML = `<span class="font-semibold block mb-1">Explanation:</span> <span class="text-gray-600 dark:text-gray-400">${qData.explanation}</span>`;
+        block.appendChild(expDiv);
+
+        $('questionsWrapper').appendChild(block);
+    });
+}
+
+function gradeQuiz() {
+    let correctCount = 0;
+    generatedQuizData.forEach((qData, qIndex) => {
+        const isCorrect = userAnswers[qIndex] === qData.correctAnswerIndex;
+        if (isCorrect) correctCount++;
+        const block = $('questionsWrapper').children[qIndex];
+        block.querySelectorAll('input').forEach(r => r.disabled = true);
+        block.querySelectorAll('label').forEach((label, optIndex) => {
+            label.className = 'flex items-center p-3 rounded-lg border opacity-70 cursor-default quiz-option';
+            if (optIndex === qData.correctAnswerIndex) label.classList.add('bg-green-50', 'dark:bg-green-900/20', 'border-green-500', 'text-green-800', 'dark:text-green-400', 'opacity-100');
+            else if (optIndex === userAnswers[qIndex] && !isCorrect) label.classList.add('bg-red-50', 'dark:bg-red-900/20', 'border-red-400', 'text-red-700', 'dark:text-red-400', 'opacity-100');
+            else label.classList.add('border-gray-200', 'dark:border-gray-700');
+        });
+        const exp = $(`exp_${qIndex}`);
+        exp.classList.remove('hidden');
+        exp.classList.add(isCorrect ? 'border-green-500' : 'border-red-400');
+    });
+
+    scoreValue.textContent = correctCount;
+    hide(submitQuizBtn);
+    show(scoreDisplay, 'flex');
+
+    userStats.quizzesGraded++;
+    syncUserStorage();
+}
+
+// ==========================================
+// YOUTUBE VIDEO SUGGESTIONS
+// ==========================================
+async function generateVideoSuggestions() {
+    const notesText = (reviewerContainer.innerText || '').trim().slice(0, 6000);
+    if (!notesText) return showToast('Generate a reviewer first before finding videos.');
+
+    hide($('videosEmptyState')); hide(videosContainer, 'flex'); show($('videosLoadingState'), 'flex');
+
+    const payload = {
+        contents: [{
+            role: "user",
+            parts: [{ text: "Identify the main topic of this study guide and suggest 4 specific YouTube search queries (3-8 words each) that would help a student learn more.\n\n" + notesText }]
+        }],
+        generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: "OBJECT",
+                properties: {
+                    topic: { type: "STRING" },
+                    suggestions: {
+                        type: "ARRAY",
+                        items: {
+                            type: "OBJECT",
+                            properties: { title: { type: "STRING" }, query: { type: "STRING" }, reason: { type: "STRING" } },
+                            required: ["title", "query", "reason"]
+                        }
+                    }
+                },
+                required: ["topic", "suggestions"]
+            }
+        }
+    };
+
+    try {
+        const text = await callGemini(payload);
+        const data = JSON.parse(text.replace(/```json|```/gi, '').trim());
+        await attachVideos(data);
+        renderVideos(data);
+    } catch (error) {
+        showToast(error.message || 'Failed to suggest videos.');
+        hide($('videosLoadingState'), 'flex'); show($('videosEmptyState'));
+    }
+}
+
+async function attachVideos(data) {
+    if (!YT_API_KEY || YT_API_KEY.startsWith('PASTE_')) return;
+    const results = await Promise.all(data.suggestions.map(async (item) => {
+        try {
+            const params = new URLSearchParams({ part: 'snippet', type: 'video', maxResults: '1', q: item.query, safeSearch: 'strict', key: YT_API_KEY });
+            const response = await fetch('https://www.googleapis.com/youtube/v3/search?' + params);
+            const json = await response.json();
+            const vid = json.items && json.items[0];
+            if (!vid) return null;
+            return { id: vid.id.videoId, title: vid.snippet.title, channel: vid.snippet.channelTitle, thumb: vid.snippet.thumbnails?.medium?.url || '' };
+        } catch (_) { return null; }
+    }));
+    data.suggestions.forEach((item, i) => { if (results[i]) item.video = results[i]; });
+}
+
+function renderVideos(data) {
+    videosContainer.innerHTML = '';
+    const heading = document.createElement('div');
+    heading.className = 'pb-4 border-b border-gray-100 dark:border-gray-800';
+    heading.innerHTML = `<h2 class="text-xl font-bold text-gray-900 dark:text-white">Recommended Lectures</h2><p class="text-sm text-gray-500 mt-1">Topic: ${data.topic}</p>`;
+    videosContainer.appendChild(heading);
+
+    data.suggestions.forEach((item) => {
+        const card = document.createElement('div');
+        card.className = 'border border-gray-200 dark:border-gray-700 rounded-2xl p-4 flex flex-col sm:flex-row gap-4 bg-white dark:bg-[#2c2c2e]';
+        const hasVideo = !!item.video;
+        const href = hasVideo ? `https://www.youtube.com/watch?v=${item.video.id}` : `https://www.youtube.com/results?search_query=${encodeURIComponent(item.query)}`;
+
+        if (hasVideo && item.video.thumb) {
+            card.innerHTML += `<a href="${href}" target="_blank" class="shrink-0 block sm:w-48"><img src="${item.video.thumb}" class="w-full aspect-video object-cover rounded-xl bg-gray-100"></a>`;
+        }
+
+        card.innerHTML += `
+            <div class="flex flex-col flex-grow min-w-0">
+                <h3 class="text-base font-semibold text-gray-900 dark:text-white">${hasVideo ? item.video.title : item.title}</h3>
+                ${hasVideo ? `<p class="text-xs text-gray-500 mt-0.5">${item.video.channel}</p>` : ''}
+                <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">${item.reason}</p>
+                <a href="${href}" target="_blank" class="mt-3 self-start ios-btn ios-btn-red ios-btn-sm">${hasVideo ? 'Watch on YouTube' : 'Search on YouTube'}</a>
+            </div>
+        `;
+        videosContainer.appendChild(card);
+    });
+
+    hide($('videosLoadingState'), 'flex'); show(videosContainer, 'flex');
+}
+
+// Toast Notification
+let toastTimer = null;
+function showToast(msg) {
+    $('errorMessage').textContent = msg;
+    $('errorToast').classList.remove('-translate-y-20', 'opacity-0');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => $('errorToast').classList.add('-translate-y-20', 'opacity-0'), 3200);
+}
