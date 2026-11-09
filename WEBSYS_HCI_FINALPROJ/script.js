@@ -5,7 +5,20 @@ const MODEL = "gemini-3.8-flash";
 const MAX_TEXT_CHARS = 60000;
 
 // --- Application & User State ---
-let registeredUsers = JSON.parse(localStorage.getItem('edumaxxing_users')) || [];
+let registeredUsers = [];
+
+try {
+    const savedUsers = JSON.parse(
+        localStorage.getItem('edumaxxing_users') || '[]'
+    );
+    
+    if (Array.isArray(savedUsers)) {
+        registeredUsers = savedUsers;
+    }
+} catch (error) {
+    console.error('Error loading registered accounts:', error);
+}
+
 let currentUser = JSON.parse(localStorage.getItem('edumaxxing_current_user')) || null;
 
 let currentBase64Image = null, currentMimeType = null, currentText = null;
@@ -19,6 +32,7 @@ let userStats = { uploads: 0, quizzesGraded: 0 };
 
 // --- DOM Helper ---
 const $ = (id) => document.getElementById(id);
+const googleSignInSection = document.getElementById('googleSignInSection');
 
 // Stage Containers
 const authScreen = $('authScreen');
@@ -76,25 +90,31 @@ if (currentUser) {
 // THEME (DARK / LIGHT MODE)
 // ==========================================
 function initTheme() {
-    const isDark = localStorage.getItem('theme') === 'dark' ||
-        (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    document.documentElement.classList.toggle('dark', isDark);
-    updateThemeIcons(isDark);
+    const isDark = currentUser && localStorage.getItem('theme') === 'dark';
+
+    document.documentElement.classList.toggle('dark', !!isDark);
+    updateThemeIcons(!!isDark);
 }
 
 function toggleTheme() {
+    if (!currentUser) return;
+
     const isDark = document.documentElement.classList.toggle('dark');
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
     updateThemeIcons(isDark);
 }
 
 function updateThemeIcons(isDark) {
-    document.querySelectorAll('.sun-icon').forEach(el => el.classList.toggle('hidden', !isDark));
-    document.querySelectorAll('.moon-icon').forEach(el => el.classList.toggle('hidden', isDark));
+    document.querySelectorAll('.sun-icon').forEach(el => {
+        el.classList.toggle('hidden', !isDark);
+    });
+    
+    document.querySelectorAll('.moon-icon').forEach(el => {
+        el.classList.toggle('hidden', isDark)
+    });
 }
 
 $('themeToggleBtn').addEventListener('click', toggleTheme);
-$('authThemeToggleBtn').addEventListener('click', toggleTheme);
 
 // ==========================================
 // STAGE 1 & 2: AUTHENTICATION & ONBOARDING
@@ -104,8 +124,15 @@ function setAuthMode(mode) {
     tabSignInBtn.classList.toggle('active', mode === 'signin');
     tabSignUpBtn.classList.toggle('active', mode === 'signup');
     signupExtraFields.classList.toggle('hidden', mode === 'signin');
+    
+    if (googleSignInSection) {
+        googleSignInSection.classList.toggle('hidden', mode === 'signup');
+    }
+
     authSubmitBtn.textContent = mode === 'signin' ? 'Sign In' : 'Create Account';
 }
+
+setAuthMode('signin');
 
 tabSignInBtn.addEventListener('click', () => setAuthMode('signin'));
 tabSignUpBtn.addEventListener('click', () => setAuthMode('signup'));
@@ -198,6 +225,7 @@ $('confirmGoogleBtn').addEventListener('click', () => {
 
 function loginSuccess(user) {
     currentUser = user;
+    initTheme();
     localStorage.setItem('edumaxxing_current_user', JSON.stringify(currentUser));
     loadUserData();
     showWelcomeScreen();
@@ -233,6 +261,10 @@ startGeneratingBtn.addEventListener('click', () => {
 
 function logoutUser() {
     currentUser = null;
+
+    document.documentElement.classList.remove('dark');
+    updateThemeIcons(false);
+
     localStorage.removeItem('edumaxxing_current_user');
     closeSideDrawer();
     fullReset();
@@ -252,9 +284,14 @@ function getStatsKey() { return `edumaxxing_stats_${currentUser.email}`; }
 
 function loadUserData() {
     if (!currentUser) return;
-    savedSubjects = JSON.parse(localStorage.getItem(getSubjectsKey())) || ["Computer Science 101", "Data Structures"];
-    savedMaterials = JSON.parse(localStorage.getItem(getMaterialsKey())) || [];
-    userStats = JSON.parse(localStorage.getItem(getStatsKey())) || { uploads: 0, quizzesGraded: 0 };
+
+    savedSubjects = JSON.parse(localStorage.getItem(getSubjectsKey())) ?? [];
+    savedMaterials = JSON.parse(localStorage.getItem(getMaterialsKey())) ?? [];
+    userStats = JSON.parse(localStorage.getItem(getStatsKey())) || { 
+        uploads: 0,
+        quizzesGraded: 0 
+    };
+
     syncUserUI();
     renderSubjectsGrid();
 }
