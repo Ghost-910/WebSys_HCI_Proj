@@ -1,6 +1,6 @@
 // --- Configuration ---
-const API_KEY = "";
-const YT_API_KEY = "";
+const API_KEY = CONFIG.GEMINI_API_KEY;
+const YT_API_KEY = CONFIG.YT_API_KEY;
 const MODEL = "gemini-3.8-flash";
 const MAX_TEXT_CHARS = 60000;
 
