@@ -1,3 +1,4 @@
+
 /* ==========================================================================
    1. THEME & COLOR VARIABLES
    Defines light mode (:root) and dark mode (.dark) colors.
@@ -615,3 +616,187 @@ a,
     border-color: var(--btn-red);
     filter: none;
 }
+
+/* =====================================
+   AUTHENTICATION SPLIT-SCREEN LAYOUT
+===================================== */
+
+.auth-screen-layout {
+    min-height: 100vh;
+    background:
+        linear-gradient(
+            90deg,
+            rgba(10, 20, 40, 0.78),
+            rgba(10, 20, 40, 0.48)
+        ),
+        url("Photos/welcome pic.jpg");
+
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+
+
+/* LEFT SIDE: INTRODUCTION */
+
+.auth-intro {
+    width: 55%;
+    max-width: 650px;
+    color: white;
+}
+
+.auth-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 9px 15px;
+    margin-bottom: 22px;
+
+    color: white;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 30px;
+
+    backdrop-filter: blur(10px);
+}
+
+.auth-intro h1 {
+    font-size: clamp(2.8rem, 5vw, 4.8rem);
+    font-weight: 800;
+    line-height: 1.12;
+    letter-spacing: -2px;
+    margin-bottom: 22px;
+}
+
+.auth-intro h1 span {
+    display: block;
+    color: #93c5fd;
+}
+
+.auth-intro > p {
+    max-width: 520px;
+    font-size: 1.05rem;
+    line-height: 1.8;
+    color: rgba(255, 255, 255, 0.88);
+}
+
+
+/* FEATURE ITEMS */
+
+.auth-features {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 35px;
+}
+
+.auth-features > div {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+
+    padding: 12px 15px;
+
+    background: rgba(255, 255, 255, 0.13);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 14px;
+
+    backdrop-filter: blur(10px);
+}
+
+.auth-features span {
+    font-size: 19px;
+}
+
+.auth-features p {
+    font-size: 12px;
+    font-weight: 600;
+    color: white;
+}
+
+
+/* RIGHT SIDE: LOGIN CARD */
+
+.auth-screen-layout .ios-glass-card {
+    width: 100%;
+    max-width: 440px;
+    flex-shrink: 0;
+
+    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+}
+
+
+/* MOBILE RESPONSIVENESS */
+
+@media (max-width: 900px) {
+
+    .auth-screen-layout {
+        flex-direction: column;
+        justify-content: center;
+        gap: 35px;
+        padding: 90px 20px 40px;
+    }
+
+    .auth-intro {
+        width: 100%;
+        max-width: 500px;
+        text-align: center;
+    }
+
+    .auth-intro h1 {
+        font-size: 2.8rem;
+    }
+
+    .auth-intro > p {
+        margin: 0 auto;
+        font-size: 0.95rem;
+    }
+
+    .auth-features {
+        justify-content: center;
+        margin-top: 22px;
+    }
+
+    .auth-screen-layout .ios-glass-card {
+        max-width: 440px;
+    }
+
+}
+
+
+@media (max-width: 480px) {
+
+    .auth-intro h1 {
+        font-size: 2.2rem;
+    }
+
+    .auth-badge {
+        font-size: 9px;
+    }
+
+    .auth-features {
+        gap: 7px;
+    }
+
+    .auth-features > div {
+        padding: 9px 10px;
+    }
+
+    .auth-features p {
+        font-size: 10px;
+    }
+
+    .auth-screen-layout .ios-glass-card {
+        padding: 25px 20px;
+    }
+
+}
+

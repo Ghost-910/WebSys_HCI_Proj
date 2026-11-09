@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EduMaxxing - Streamlined Academic Weaponry</title>
+    <title>EduMaxxing - The Streamlined Anti-Cram Engine</title>
+    
     
     <!-- Tailwind CSS Script -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -23,26 +24,54 @@
     <!-- Google Fonts & Custom Stylesheet -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+
 </head>
 <body class="bg-[#f2f2f7] dark:bg-black text-gray-800 dark:text-gray-100 antialiased min-h-screen flex flex-col transition-colors duration-300">
 
     <!-- ==========================================================================
          STAGE 1: FULL-SCREEN IOS AUTHENTICATION
          ========================================================================== -->
-    <section id="authScreen" class="min-h-screen w-full flex flex-col items-center justify-center p-4 relative overflow-hidden">
+    <section 
+        id="authScreen" 
+        class="auth-screen-layout min-h-screen w-full flex items-center justify-between gap-12 px-6 py-12 md:px-12 lg:px-20 relative overflow-hidden"
+    >
         <!-- Ambient iOS Mesh Glow -->
         <div class="ios-blob bg-blue-500/25 dark:bg-blue-600/20 -top-20 -left-20"></div>
         <div class="ios-blob bg-purple-500/25 dark:bg-purple-600/20 bottom-0 -right-20"></div>
 
-        <!-- Theme Toggle on Auth Screen -->
-        <button id="authThemeToggleBtn" class="fixed top-5 right-5 p-3 ios-card text-gray-700 dark:text-gray-200 hover:scale-105 transition-transform z-20" title="Toggle Theme">
-            <svg class="moon-icon h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-            </svg>
-            <svg class="sun-icon h-5 w-5 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
-        </button>
+
+        <!--LEFT SIDE: WELCOME INTRO-->
+        <div class="auth-intro z-10">
+            <span class="auth-badge">
+                Your Personalized Study Companion
+            </span>
+
+            <h1> 
+                Start Edumaxxing.
+                <span> Achieve More.</span>
+            </h1>
+
+            <p>
+                Transform your static lecture photos, PDFs, and Word documents into structured reviewers, 5-item active recall quizzes, and curated video lectures.
+            </p>
+
+            <div class="auth-features">
+                <div>
+                    <span> + </span>
+                    <p> Smart Reviewers</p>
+                </div>
+
+                <div>
+                    <span> + </span>
+                    <p> Active Recall Quizzes</p>
+                </div>
+
+                <div>
+                    <span> + </span>
+                    <p> Curated Video Lectures</p>
+                </div>
+            </div>
+        </div>
 
         <div class="ios-glass-card w-full max-w-md p-8 sm:p-10 z-10">
             <!-- Brand Header -->
@@ -53,7 +82,7 @@
                     </svg>
                 </div>
                 <h1 class="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">EduMaxxing</h1>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Streamlined Academic Weaponry</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">The Streamlined Anti-Cram Engine</p>
             </div>
 
             <!-- iOS Segmented Auth Mode Switch -->
@@ -89,6 +118,8 @@
                     Sign In
                 </button>
             </form>
+
+        <div id="googleSignInSection">
 
             <!-- Divider -->
             <div class="relative flex py-5 items-center">
@@ -135,13 +166,13 @@
             <div class="grid grid-cols-3 gap-3 w-full mb-8 text-left">
                 <div class="p-3.5 rounded-2xl bg-gray-100/80 dark:bg-[#2c2c2e] border border-gray-200/60 dark:border-gray-700/50">
                     <div class="text-xl mb-1">⚡</div>
-                    <p class="text-xs font-bold text-gray-900 dark:text-white">AI Reviewer</p>
-                    <p class="text-[11px] text-gray-500 dark:text-gray-400">Clean HTML notes</p>
+                    <p class="text-xs font-bold text-gray-900 dark:text-white"> Upload Reviewer</p>
+                    <p class="text-[11px] text-gray-500 dark:text-gray-400">Transform your notes</p>
                 </div>
                 <div class="p-3.5 rounded-2xl bg-gray-100/80 dark:bg-[#2c2c2e] border border-gray-200/60 dark:border-gray-700/50">
                     <div class="text-xl mb-1">🎯</div>
                     <p class="text-xs font-bold text-gray-900 dark:text-white">5-Item Quiz</p>
-                    <p class="text-[11px] text-gray-500 dark:text-gray-400">Instant feedback</p>
+                    <p class="text-[11px] text-gray-500 dark:text-gray-400">Easy recall</p>
                 </div>
                 <div class="p-3.5 rounded-2xl bg-gray-100/80 dark:bg-[#2c2c2e] border border-gray-200/60 dark:border-gray-700/50">
                     <div class="text-xl mb-1">▶️</div>
@@ -151,7 +182,7 @@
             </div>
 
             <button id="startGeneratingBtn" class="w-full sm:w-auto min-w-[240px] ios-btn ios-btn-blue text-base py-4 px-8 shadow-xl shadow-blue-500/25 flex items-center justify-center gap-3">
-                <span>Start Generating</span>
+                <span>Start EduMaxxing</span>
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                 </svg>
@@ -245,10 +276,10 @@
         <main id="viewHome" class="flex-grow max-w-7xl mx-auto w-full p-3 sm:p-4 md:p-8 space-y-6">
 
             <!-- Overview Stats Row -->
-            <section class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <section class="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 <div class="ios-card p-5 flex items-center justify-between">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">Total Subjects</p>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">My Subjects</p>
                         <p id="statSubjectsCount" class="text-3xl font-extrabold text-gray-900 dark:text-white mt-1">0</p>
                         <p class="text-xs text-blue-500 font-medium mt-1 cursor-pointer hover:underline" id="quickJumpSubjects">Manage folders →</p>
                     </div>
