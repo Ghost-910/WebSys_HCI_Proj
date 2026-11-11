@@ -622,7 +622,20 @@ a,
 ===================================== */
 
 .auth-screen-layout {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+
+    width: 100%;
+    height:100vh;
+
+
     min-height: 100vh;
+
+    box-sizing: border-box;
+    overflow: hidden;
+
     background:
         linear-gradient(
             90deg,
@@ -635,13 +648,15 @@ a,
     background-position: center;
     background-repeat: no-repeat;
     background-attachment: fixed;
+
 }
 
 
 /* LEFT SIDE: INTRODUCTION */
 
 .auth-intro {
-    width: 55%;
+    flex: 1;
+    width: auto;
     max-width: 650px;
     color: white;
 }
@@ -720,6 +735,7 @@ a,
 /* RIGHT SIDE: LOGIN CARD */
 
 .auth-screen-layout .ios-glass-card {
+    flex: 0 0 440px;
     width: 100%;
     max-width: 440px;
     flex-shrink: 0;
@@ -740,12 +756,19 @@ a,
 
     .auth-screen-layout {
         flex-direction: column;
-        justify-content: center;
-        gap: 35px;
-        padding: 90px 20px 40px;
+        justify-content: flex-start;
+        align-items: center;
+        gap: 30px;
+
+        height: auto;
+        min-height: 100vh;
+        padding: 35px 20px 40px;
+
+        overflow-y: visible;
     }
 
     .auth-intro {
+        flex: none;
         width: 100%;
         max-width: 500px;
         text-align: center;
@@ -766,6 +789,8 @@ a,
     }
 
     .auth-screen-layout .ios-glass-card {
+        flex: none;
+        width: 100%;
         max-width: 440px;
     }
 

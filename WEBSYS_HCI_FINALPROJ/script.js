@@ -30,6 +30,13 @@ let savedSubjects = [];
 let savedMaterials = [];
 let userStats = { uploads: 0, quizzesGraded: 0 };
 
+let currentMaterialId = null;
+let pendingQuizResult = null;
+let pendingQuizAttempts = [];
+
+let savedMaterialReturnView = 'reviewers';
+let savedMaterialReturnSubject = null;
+
 // --- DOM Helper ---
 const $ = (id) => document.getElementById(id);
 const googleSignInSection = document.getElementById('googleSignInSection');
@@ -52,8 +59,16 @@ const googleNameInput = $('googleNameInput'), googleEmailInput = $('googleEmailI
 const welcomeAvatar = $('welcomeAvatar'), welcomeUserName = $('welcomeUserName'), startGeneratingBtn = $('startGeneratingBtn');
 
 // Main App Views & Navigation
-const viewHome = $('viewHome'), viewSubjects = $('viewSubjects'), viewProfile = $('viewProfile');
-const navHomeBtn = $('navHomeBtn'), navSubjectsBtn = $('navSubjectsBtn'), navProfileBtn = $('navProfileBtn');
+const viewHome = $('viewHome'); 
+const viewSubjects = $('viewSubjects');
+const viewReviewers = $('viewReviewers');
+const viewMastery = $('viewMastery');
+const viewProfile = $('viewProfile');
+
+const navHomeBtn = $('navHomeBtn');
+const navSubjectsBtn = $('navSubjectsBtn');
+const navReviewersBtn = $('navReviewersBtn');
+const navProfileBtn = $('navProfileBtn');
 const hamburgerBtn = $('hamburgerBtn'), sideMenuDrawer = $('sideMenuDrawer'), sideMenuOverlay = $('sideMenuOverlay');
 
 // Upload & Generator Elements
@@ -318,7 +333,6 @@ function syncUserUI() {
     // Dashboard Stats Row
     $('statSubjectsCount').textContent = savedSubjects.length;
     $('statReviewersCount').textContent = savedMaterials.length;
-    $('statUploadsCount').textContent = userStats.uploads;
 
     // Personal Info Dashboard
     $('profileBigAvatar').textContent = initial;
@@ -364,11 +378,14 @@ $('personalInfoForm').addEventListener('submit', (e) => {
 function switchMainView(view) {
     viewHome.classList.toggle('hidden', view !== 'home');
     viewSubjects.classList.toggle('hidden', view !== 'subjects');
+    viewReviewers.classList.toggle('hidden', view !== 'reviewers');
+    viewMastery.classList.toggle('hidden', view !== 'mastery');
     viewProfile.classList.toggle('hidden', view !== 'profile');
 
     const navMap = {
         home: navHomeBtn,
         subjects: navSubjectsBtn,
+        reviewers: navReviewersBtn,
         profile: navProfileBtn
     };
 
@@ -382,15 +399,40 @@ function switchMainView(view) {
         }
     });
 
-    if (view === 'subjects') renderSubjectsGrid();
-    if (view === 'profile') syncUserUI();
+    if (view === 'subjects') {
+        $('subjectDetailView').classList.add('hidden');
+        $('subjectsMainView').classList.remove('hidden');
+        renderSubjectsGrid();
+    }
+    if (view === 'reviewers') {
+        $('reviewerHistoryList').classList.remove('hidden');
+        $('savedReviewerReader').classList.add('hidden');
+        renderReviewerHistory();
+    }
+    
+    if (view === 'mastery') {
+        renderMasteryList();
+    }
+
+    if (view === 'home') {
+        renderMasteryList();
+    }
+
+    if (view === 'profile') {
+        syncUserUI();
+    }
 }
 
 navHomeBtn.addEventListener('click', () => switchMainView('home'));
 navSubjectsBtn.addEventListener('click', () => switchMainView('subjects'));
+navReviewersBtn.addEventListener('click', () => switchMainView('mastery'));
 navProfileBtn.addEventListener('click', () => switchMainView('profile'));
 $('headerProfileChip').addEventListener('click', () => switchMainView('profile'));
 $('quickJumpSubjects').addEventListener('click', () => switchMainView('subjects'));
+$('viewReviewerHistoryBtn').addEventListener('click', () => switchMainView('reviewers'));
+$('openMasteryBtn').addEventListener('click', () => {
+    switchMainView('mastery');
+});
 
 // Side Drawer
 hamburgerBtn.addEventListener('click', () => {
@@ -514,9 +556,15 @@ $('confirmSaveBtn').addEventListener('click', () => {
         subject: targetSubject,
         date: new Date().toLocaleDateString(),
         reviewerHTML: currentGeneratedReviewerHTML,
-        quizData: generatedQuizData
+        quizData: generatedQuizData,
+        quizResult: pendingQuizResult,
+        quizAttempts: [ ...pendingQuizAttempts],
+        masteryAdded: false
     };
     savedMaterials.push(newMaterial);
+    currentMaterialId = newMaterial.id;
+    pendingQuizResult = null;
+    pendingQuizAttempts = [];
     syncUserStorage();
     closeModal(saveModalOverlay);
     showToast(`Saved to ${targetSubject}!`);
@@ -544,12 +592,165 @@ function renderSubjectsGrid() {
             <p class="text-sm text-gray-500 mt-1">${count} Saved ${count === 1 ? 'Session' : 'Sessions'}</p>
         </div>`;
     }).join('');
-    $('subjectDetailView').classList.add('hidden');
-    grid.classList.remove('hidden');
 }
 
+function escapeHTML(value) {
+    return String(value).replace(/[&<>"']/g, character => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    })[character]);
+}
+
+function renderReviewerHistory() {
+    const historyList = $('reviewerHistoryItems');
+
+    if (savedMaterials.length === 0) {
+        historyList.innerHTML = `
+            <div class="ios-card p-6 text-center">
+                <p class="text-gray-500">
+                    No saved study sessions yet. 
+                    Upload a file and generate a reviewer to save your first session!
+                </p>
+            </div>
+        `;
+        return;
+    }
+
+    historyList.innerHTML = savedMaterials.map((material, index) => `
+        <div class="ios-card p-5 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-4 min-w-0">
+                <div class="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center font-bold shrink-0">
+                    ${index + 1}
+                </div>
+                
+                <div class="min-w-0">
+                    <h3 class="font-bold text-gray-900 dark:text-white truncate">
+                        ${escapeHTML(material.title || 'Study Session')}
+                    </h3>    
+        
+                    <p class="text-sm text-gray-500 mt-1">
+                        Subject: ${escapeHTML(material.subject || 'Uncategorized')}
+                    </p>
+                    
+                    <p class="text-xs text-gray-400 mt-1">
+                        Saved: ${escapeHTML(material.date || 'Unknown Date')}
+                    </p>
+                </div>  
+            </div>
+
+            <button onclick="loadSavedMaterial(${Number(material.id)})"
+                class="ios-btn ios-btn-sm ios-btn-blue shrink-0"
+            >
+                Open Reviewer
+            </button>
+        </div>        
+    `).join('');
+}
+
+function renderMasteryList() {
+    const items = savedMaterials.filter(
+        material => material.masteryAdded === true
+    );
+
+    const renderItems = (containerId) => {
+        const masteryList = $(containerId);
+        if (!masteryList) return;
+
+        if (items.length === 0) {
+            masteryList.innerHTML = `
+                <p class="text-sm text-gray-500">
+                    No quizzes needing improvement yet. Open a saved reviewer and add the quiz to practice it again.
+                </p>  
+            `;
+            return;
+        }
+
+        masteryList.innerHTML = items.map(material => `
+            <div class="ios-card p-4 flex items-center justify-between gap-4">
+                <div class="min-w-0">
+                    <h3 class="font-bold text-gray-900 dark:text-white">
+                        ${escapeHTML(material.title || 'Saved Reviewer')}
+                    </h3>
+                
+                    <p class="text-sm text-gray-500 mt-1">
+                        Subject: ${escapeHTML(material.subject || 'Uncategorized')}
+                    </p> 
+                
+                    <p class="text-xs text-red-500 mt-1">
+                        Original Score:
+                        ${material.quizAttempts?.[0]?.correctCount ?? 
+                            material.quizResult?.correctCount ?? 0}/
+                        ${material.quizResult?.totalQuestions ?? 0}
+                    </p>
+                </div>
+
+                <div class="flex flex-col gap-2 shrink-0">
+                    <button
+                        onclick="localSavedMaterial(${Number(material.id)}, 'home')"
+                        class="ios-btn ios-btn-sm ios-btn-blue">
+                        Retake Quiz
+                    </button>
+
+                    <button 
+                        onclick="removeFromMastery(${Number(material.id)})"
+                        class="ios-btn ios-btn-sm ios-btn-blue shrink-0">
+                        Remove
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    };
+
+    renderItems('masteryList');
+    renderItems('masteryPageList');
+}
+
+window.localSavedMaterial = function(id, returnView = 'home') {
+    const item = savedMaterials.find(
+        material => material.id === id
+    );
+
+    if (!item) {
+        showToast('Saved quiz not found.');
+        return;
+    }
+
+    if (!item.quizData || item.quizDataLength === 0) {
+        showToast('No quiz available for this saved reviewer.');
+        return;
+    }
+
+    currentMaterialId = item.id;
+    generatedQuizData = item.quizData;
+
+    switchMainView('home');
+
+    switchTab('quiz');
+    renderQuizUI();
+
+    showToast('You can now retake your quiz.');
+};
+
+window.removeFromMastery = function(id) {
+    const item = savedMaterials.find(
+        material => material.id === id
+    );
+
+    if (!item) return;
+
+    item.masteryAdded = false;
+
+    syncUserStorage();
+    renderMasteryList();
+
+    showToast('Quiz removed from Mastery. Keep Edumaxxing!');
+};
+
 window.openSubjectDetail = function(subject) {
-    $('subjectsGrid').classList.add('hidden');
+    $('subjectsMainView').classList.add('hidden');
     $('subjectDetailView').classList.remove('hidden');
     $('subjectDetailTitle').textContent = subject;
 
@@ -562,34 +763,149 @@ window.openSubjectDetail = function(subject) {
                 <p class="font-bold text-gray-900 dark:text-white">${m.title || 'Study Session'}</p>
                 <p class="text-xs text-gray-500 mt-0.5">${m.date} · ${m.quizData ? 'Reviewer + 5-Item Quiz' : 'Reviewer Only'}</p>
             </div>
-            <button onclick="loadSavedMaterial(${m.id})" class="ios-btn ios-btn-sm ios-btn-blue">Open Session</button>
+            <button onclick="loadSavedMaterial(${m.id}, 'subjects', '${escapeHTML(subject)}')" class="ios-btn ios-btn-sm ios-btn-blue">
+                Open
+            </button>
         </div>`).join('');
 };
 
-window.loadSavedMaterial = function(id) {
+function renderSavedQuizAttempts(item) {
+    const container = $('savedQuizAttempts');
+
+    if (!item.quizData || !item.quizAttempts || item.quizAttempts.length === 0) {
+        container.innerHTML = `
+            <p class="text-sm text-gray-500">
+                No answered quiz attempts available yet.
+            </p>    
+        `;
+        return;
+    }
+
+    container.innerHTML = item.quizAttempts.map((attempt, attemptIndex) => `
+        <div class="ios-card p-5 space-y-4">
+            <div class="flex justify-between items-center">
+                <h4 class="font-bold">Attempt ${attemptIndex + 1}</h4>
+                <span class="text-sm font-semibold text-blue-500">
+                    ${attempt.correctCount}/${attempt.totalQuestions}
+                </span>
+            </div>
+
+            <p class="text-xs text-gray-500">
+                ${escapeHTML(attempt.gradedAt)}
+            </p>
+
+            ${item.quizData.map((q, qIndex) => {
+                const selected = attempt.answers[qIndex];
+                const correct = q.correctAnswerIndex;
+
+                return `
+                    <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+                        <p class="font-semibold mb-3">
+                            ${qIndex + 1}. ${escapeHTML(q.question)}
+                        </p>
+
+                        <p class="text-sm text-red-500">
+                            Your answer:
+                            ${selected === undefined
+                                ? 'No answer'
+                                : escapeHTML(q.options[selected])}
+                        </p>
+
+                        <p class="text-sm text-green-600 mt-1">
+                            Correct answer:
+                            ${escapeHTML(q.options[correct])}
+                        </p>
+
+                        <p class="text-sm text-gray-500 mt-1">
+                            ${escapeHTML(q.explanation || '')}
+                        </p>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `).join('');
+}
+
+$('addToMasteryBtn').addEventListener('click', () => {
+    const item = savedMaterials.find(
+        material => material.id === currentMaterialId
+    );
+
+    if (!item) return;
+
+    if (!item.quizData || !item.quizResult) {
+        showToast('Complete the quiz first before adding it.');
+        return;
+    }
+
+    item.masteryAdded = true;
+
+    syncUserStorage();
+    renderMasteryList();
+
+    showToast('Quiz is in -> For Mastery.')
+});
+
+window.loadSavedMaterial = function(id, returnView = 'reviewers', subject = null) {
     const item = savedMaterials.find(m => m.id === id);
     if (!item) return;
 
-    currentGeneratedReviewerHTML = item.reviewerHTML;
-    reviewerContainer.innerHTML = item.reviewerHTML;
-    hide($('reviewerEmptyState'));
-    show(reviewerContainer);
-    saveActionHeader.classList.remove('hidden');
-    $('currentSessionLabel').textContent = `${item.subject} · ${item.title || 'Saved Session'}`;
-    generateVideosBtn.disabled = false;
+    currentMaterialId = item.id;
+    pendingQuizResult = item.quizResult || null;
 
-    if (item.quizData) {
-        generatedQuizData = item.quizData;
-        renderQuizUI();
-    }
-    switchMainView('home');
-    switchTab('reviewer');
-    showToast(`Loaded "${item.title || 'Study Session'}"`);
+    savedMaterialReturnView = returnView;
+    savedMaterialReturnSubject = subject;
+
+    currentGeneratedReviewerHTML = item.reviewerHTML || '';
+
+    $('savedReviewerTitle').textContent = item.title || 'Saved Reviewer';
+
+    $('savedReviewerSubject').textContent = `Subject: ${item.subject || 'Uncategorized'}`;
+
+    $('savedReviewerContent').innerHTML = item.reviewerHTML || '<p>No reviewer available.</p>';
+
+
+    generatedQuizData = item.quizData || [];
+
+    renderSavedQuizAttempts(item);
+
+    $('addToMasteryBtn').textContent = item.masteryAdded
+        ? 'Added to: For Mastery'
+        : '+ For Mastery';
+
+    switchMainView('reviewers');
+    
+    $('reviewerHistoryList').classList.add('hidden');
+    $('savedReviewerReader').classList.remove('hidden');
+
+    showToast(`Opened "${item.title || 'Saved Reviewer'}"`);
 };
+
+$('backToReviewerHistoryBtn').addEventListener('click', () => {
+    $('savedReviewerReader').classList.add('hidden');
+
+    if (savedMaterialReturnView === 'subjects') {
+        switchMainView('subjects');
+
+        $('subjectsMainView').classList.add('hidden');
+        $('subjectDetailView').classList.remove('hidden');
+
+        $('subjectDetailTitle').textContent = savedMaterialReturnSubject || '';
+    } else if (savedMaterialReturnView === 'home') {
+        switchMainView('home');
+
+    } else {
+        switchMainView('reviewers');
+        $('reviewerHistoryList').classList.remove('hidden');
+        renderReviewerHistory();
+    }
+});
 
 $('backToSubjectsBtn').addEventListener('click', () => {
     $('subjectDetailView').classList.add('hidden');
-    $('subjectsGrid').classList.remove('hidden');
+    $('subjectsMainView').classList.remove('hidden');
+
+    renderSubjectsGrid();
 });
 
 // ==========================================
@@ -651,7 +967,12 @@ async function handleFileSelect(event) {
     if (!file) return;
 
     uploadId++;
+    currentMaterialId = null;
+    pendingQuizResult = null;
+    pendingQuizAttempts = [];
+
     currentUploadedFileName = file.name;
+    
     saveActionHeader.classList.add('hidden');
     currentBase64Image = null; currentMimeType = null; currentText = null;
     currentGeneratedReviewerHTML = ""; generatedQuizData = null;
@@ -876,6 +1197,43 @@ function gradeQuiz() {
     scoreValue.textContent = correctCount;
     hide(submitQuizBtn);
     show(scoreDisplay, 'flex');
+
+    //added code for storing the incorrect answer count with the saved reviewer
+    const incorrectCount = generatedQuizData.length - correctCount;
+
+    const quizResult = {
+        correctCount: correctCount,
+        incorrectCount: incorrectCount,
+        totalQuestions: generatedQuizData.length,
+        gradedAt: new Date().toLocaleString()
+    };
+
+    const quizAttempt = {
+        answers: { ...userAnswers },
+        correctCount,
+        incorrectCount,
+        totalQuestions: generatedQuizData.length,
+        gradedAt: quizResult.gradedAt
+    };
+
+    if (currentMaterialId !== null) {
+        const savedItem = savedMaterials.find(
+            material => material.id === currentMaterialId 
+        );
+
+        if (savedItem) {
+            savedItem.quizResult = quizResult;
+
+            if(!savedItem.quizAttempts) {
+                savedItem.quizAttempts = [];
+            }
+
+            savedItem.quizAttempts.push(quizAttempt);
+        }   
+    } else {
+        pendingQuizResult = quizResult;
+        pendingQuizAttempts.push(quizAttempt);
+    }
 
     userStats.quizzesGraded++;
     syncUserStorage();

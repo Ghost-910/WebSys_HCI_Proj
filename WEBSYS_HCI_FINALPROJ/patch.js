@@ -28,22 +28,58 @@
     @keyframes viewIn{from{opacity:0;transform:translateY(16px) scale(.985);filter:blur(5px)}to{opacity:1;transform:none;filter:none}}
     @media (prefers-reduced-motion:reduce){.bnav,.bnav-pill,.view-in{animation:none!important;transition:none!important}}`;
     const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+    st.textContent = css;
+    document.head.appendChild(st);
 
-    const btns = { home: $('navHomeBtn'), subjects: $('navSubjectsBtn'), profile: $('navProfileBtn') };
-    const nav = btns.home.parentElement, wrap = nav.parentElement;
-    wrap.className = 'bnav-wrap'; nav.className = 'bnav';
-    const pill = document.createElement('span'); pill.className = 'bnav-pill'; nav.prepend(pill);
+    const btns = { 
+        home: $('navHomeBtn'), 
+        subjects: $('navSubjectsBtn'),
+        mastery: $('navReviewersBtn'),
+        profile: $('navProfileBtn') };
+
+    const nav = btns.home.parentElement;
+    const wrap = nav.parentElement;
+
+    wrap.className = 'bnav-wrap'; 
+    nav.className = 'bnav';
+
+    const pill = document.createElement('span'); 
+    pill.className = 'bnav-pill'; 
+    nav.prepend(pill);
 
     function setNav(view) {
-        Object.entries(btns).forEach(([k, b]) => { b.className = k === view ? 'active' : ''; });
-        nav.style.setProperty('--i', Object.keys(btns).indexOf(view));
+        const selectedView = view === 'reviewers' ? null : view;
+
+        Object.entries(btns).forEach(([k, b]) => { 
+            b.className = k === view ? 'active' : ''; 
+        });
+
+        if (selectedView) {
+            nav.style.setProperty('--i', Object.keys(btns).indexOf(selectedView));
+            pill.style.opacity = '1';
+        } else {
+            pill.style.opacity = '0';
+        }
     }
+
     const original = switchMainView;
     switchMainView = function (view) {
         original(view); setNav(view);
-        const el = { home: viewHome, subjects: viewSubjects, profile: viewProfile }[view];
-        el.classList.remove('view-in'); void el.offsetWidth; el.classList.add('view-in');
+        const el = { 
+            home: viewHome, 
+            subjects: viewSubjects, 
+            reviewers: viewReviewers,
+            mastery: viewMastery,
+            profile: viewProfile 
+        }[view];
+
+        if (el) {
+            el.classList.remove('view-in'); 
+            void el.offsetWidth; 
+            el.classList.add('view-in');
+        }
     };
+
     setNav('home');
 })();
 
