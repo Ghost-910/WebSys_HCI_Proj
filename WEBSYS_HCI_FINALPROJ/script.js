@@ -236,11 +236,11 @@ function showWelcomeScreen() {
     if(getEl('welcomeUserName') && currentUser) getEl('welcomeUserName').textContent = currentUser.name.split(' ')[0];
 }
 
-function logoutUser() {
-    currentUser = null; document.documentElement.classList.remove('dark'); updateThemeIcons(false);
-    localStorage.removeItem('edumaxxing_current_user'); closeSideDrawer(); fullReset();
-    showAuthScreen(); showToast('Signed out of your account.');
-}
+window.logoutUser = function() {
+    localStorage.removeItem('edumaxxing_current_user');
+    window.location.reload(); 
+};
+
 addEvt('drawerLogoutBtn', 'click', logoutUser);
 addEvt('profileSignOutBtn', 'click', logoutUser);
 

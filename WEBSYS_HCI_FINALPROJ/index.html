@@ -210,7 +210,7 @@
                 </nav>
             </div>
             <div class="p-6 border-t border-gray-200 dark:border-gray-800">
-                <button id="drawerLogoutBtn" class="w-full ios-btn ios-btn-tint">Sign Out</button>
+                <button id="drawerLogoutBtn" onclick="logoutUser()" class="w-full ios-btn ios-btn-tint" type="button">Sign Out</button>
             </div>
         </div>
 
@@ -465,7 +465,7 @@
                     <p id="profileHeroEmail" class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">student@example.com</p>
                     <p id="profileHeroMeta" class="text-xs font-medium text-gray-400 dark:text-gray-500 mt-2">Batangas State University · BS Computer Science</p>
                 </div>
-                <button id="profileSignOutBtn" class="ios-btn ios-btn-tint ios-btn-sm shrink-0">Sign Out</button>
+                <button id="profileSignOutBtn" onclick="logoutUser()" class="ios-btn ios-btn-tint ios-btn-sm shrink-0" type="button">Sign Out</button>
             </div>
 
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
