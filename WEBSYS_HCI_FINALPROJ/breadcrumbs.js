@@ -25,6 +25,12 @@
     .crumb-link:hover { background: var(--ios-fill); text-decoration: underline; }
     .crumb-current { padding: 0 8px; font-weight: 700; color: var(--ios-label); max-width: 14rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+    /* Quiz tab: the container had a fixed height, so the sticky "answered / Submit" bar got stuck mid-page
+       with the rest of the quiz showing below it. Let the container grow, so the bar pins to the bottom. */
+    #quizContainer { height: auto !important; min-height: 100%; }
+    #quizContainer > div:last-child { position: sticky; bottom: 0; z-index: 5; background: var(--ios-card-bg);
+        box-shadow: 0 -10px 14px -10px rgba(0, 0, 0, .18); }
+
     /* Other usability bits */
     .skip-link { position: fixed; left: 12px; top: -60px; z-index: 100; padding: 10px 16px; border-radius: 10px; background: var(--btn-blue); color: #fff; font-weight: 600; transition: top .15s; }
     .skip-link:focus { top: 12px; }
@@ -74,7 +80,7 @@
         const record = fromList
             ? { t: title, go: () => loadSavedMaterial(item.id, 'mastery', null, true) }
             : { t: title, go: () => loadSavedMaterial(item.id, 'subjects', item.subject) };
-        return fromList ? [home, quizzes, record, { t: 'Quiz' }] : [home, subjects, subject(item.subject), record, { t: 'Quiz' }];
+        return [home, quizzes, record, { t: 'Quiz' }];   // a quiz always sits under Quizzes
     }
 
     // A small description of the current page, used for the Back button
