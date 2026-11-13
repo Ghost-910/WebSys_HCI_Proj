@@ -83,7 +83,7 @@
             model: images.length ? VISION_MODEL : TEXT_MODEL, stream,
             messages: [{ 
                 role: 'system', 
-                content: 'You are a strict data-extraction professor. CRITICAL RULES: 1. You MUST transcribe and use ONLY the exact handwritten Target Strings and Production Rules visible in the image. DO NOT invent or assume standard textbook examples (e.g., do NOT output S -> aSb or E -> (E) or E -> id unless explicitly written). If the user wrote "S -> aS | bS | a | b", you must output exactly that. 2. Format strictly using nested <ul> lists: - Topic Name -> Target String, Production Rules, Derivation Structure. 3. Output ONLY the requested HTML material with NO conversational filler and NO intros. 4. NO LaTeX, NO dollar signs ($).' 
+                content: 'You are a strict data-extraction professor. Analyze the study material and extract key academic concepts. Explicitly ignore metadata like course codes, student names, or syllabus headers. CRITICAL RULES: 1. You MUST transcribe ONLY the exact handwritten Target Strings and Production Rules visible in the image. DO NOT invent textbook examples. 2. NO LaTeX or dollar signs ($). Write math as plain text. 3. Be concise and output ONLY the requested HTML study guide using <h3>, <ul>, <li>, <p>, <strong> with NO conversational filler. Do not use markdown code blocks.' 
             }, msg],            ...(schema ? { format: lower(schema) } : {}),
             options: { num_ctx: NUM_CTX, temperature: 0.25 }, keep_alive: '30m'
         };
