@@ -776,13 +776,20 @@ function finalizeUpload(name, type, icon, isImg) {
 }
 
 function fullReset() {
+    uploadId++; // <-- This magic line instantly kills pending background generators!
+    
     if(getEl('fileInput')) getEl('fileInput').value = ''; 
     currentBase64Image = null; currentText = null; currentGeneratedReviewerHTML = "";
+    
     hide(getEl('previewContainer'), 'flex'); show(getEl('uploadArea'));
+    
     if(getEl('reviewerContainer')) getEl('reviewerContainer').innerHTML = ''; 
     hide(getEl('reviewerContainer')); show(getEl('reviewerEmptyState'));
+    
     hide(getEl('quizContainer'), 'flex'); show(getEl('quizEmptyState'));
+    
     hide(getEl('videosContainer'), 'flex'); show(getEl('videosEmptyState'));
+    
     hide(getEl('saveActionHeader')); switchTab('reviewer');
 }
 
@@ -790,7 +797,7 @@ async function streamReviewer() {
     if (!hasSource()) return;
     const myId = uploadId; const rc = getEl('reviewerContainer'), ls = getEl('reviewerLoadingState');
     hide(getEl('reviewerEmptyState')); hide(rc); show(ls, 'flex'); startLoadingTimer('reviewerTimer');
-    const payload = { contents: [{ role: 'user', parts: [{ text: 'Analyze the study material. Extract key academic concepts and definitions. Explicitly ignore metadata like course codes, student names, or syllabus headers. Be concise. Format as an HTML study guide using <h3>, <ul>, <li>, <p>, <strong>. Do not use markdown code blocks.' }].concat(sourceParts()) }] };
+    const payload = { contents: [{ role: 'user', parts: [{ text:'Act as an expert professor. Analyze the study material and create a highly detailed, comprehensive study guide. Extract all key academic concepts, definitions, theories, and supporting details. Expand on each point with thorough explanations provided in the text. Format as an HTML study guide using <h3>, <ul>, <li>, <p>, <strong>. Do not use markdown code blocks.' }].concat(sourceParts()) }] };
     let full = '';
     try {
         await gemStream(payload, (chunk) => {
@@ -808,13 +815,30 @@ async function streamReviewer() {
 
 async function generateQuizFromNotes() {
     if (!hasSource()) return;
+    
+    // 1. Grab the current upload's unique ID
+    const myId = uploadId; 
+    
     hide(getEl('quizEmptyState')); hide(getEl('quizContainer'), 'flex'); show(getEl('quizLoadingState'), 'flex'); startLoadingTimer('quizTimer');
+    
     const payload = { contents: [{ role: "user", parts: [ { text: "Analyze the material and generate exactly 5 multiple-choice questions based ONLY on the core academic concepts, definitions, and theories presented. Explicitly IGNORE metadata such as course codes, syllabus titles, student names, dates, university names, or page numbers." }].concat(sourceParts()) }], generationConfig: { responseMimeType: "application/json", responseSchema: { type: "ARRAY", items: { type: "OBJECT", properties: { question: { type: "STRING" }, options: { type: "ARRAY", items: { type: "STRING" } }, correctAnswerIndex: { type: "INTEGER" }, explanation: { type: "STRING" } }, required: ["question", "options", "correctAnswerIndex", "explanation"] } } } };
+    
     try {
-        const text = await callGemini(payload); generatedQuizData = JSON.parse(text.replace(/```json|```/gi, '').trim()).slice(0, 5);
+        const text = await callGemini(payload); 
+        
+        // 2. If the user uploaded a new file while this was generating, silently discard this old quiz!
+        if (myId !== uploadId) return; 
+        
+        generatedQuizData = JSON.parse(text.replace(/```json|```/gi, '').trim()).slice(0, 5);
         const ls = getEl('quizLoadingState'); if(ls) { ls.classList.add('hidden'); ls.classList.remove('flex'); }
         renderQuizUI();
-    } catch (error) { const ls = getEl('quizLoadingState'); if(ls) { ls.classList.add('hidden'); ls.classList.remove('flex'); } showToast(error.message || 'Failed to generate quiz.'); show(getEl('quizEmptyState')); }
+    } catch (error) { 
+        // 3. Silently discard old errors too
+        if (myId !== uploadId) return; 
+        
+        const ls = getEl('quizLoadingState'); if(ls) { ls.classList.add('hidden'); ls.classList.remove('flex'); } 
+        showToast(error.message || 'Failed to generate quiz.'); show(getEl('quizEmptyState')); 
+    }
 }
 
 function renderQuizUI() {

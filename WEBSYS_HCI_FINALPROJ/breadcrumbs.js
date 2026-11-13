@@ -30,6 +30,10 @@
     #quizContainer { height: auto !important; min-height: 100%; }
     #quizContainer > div:last-child { position: sticky; bottom: 0; z-index: 5; background: var(--ios-card-bg);
         box-shadow: 0 -10px 14px -10px rgba(0, 0, 0, .18); }
+    /* The panel's own bottom padding left a strip under the bar where the quiz showed through.
+       While the quiz is on screen, remove that padding so the bar sits flush at the bottom edge. */
+    div.overflow-y-auto:has(#tabQuizContent:not(.hidden) #quizContainer:not(.hidden)) { padding-bottom: 0 !important; }
+    #quizContainer > div:last-child { padding-bottom: 1rem; }
 
     /* Other usability bits */
     .skip-link { position: fixed; left: 12px; top: -60px; z-index: 100; padding: 10px 16px; border-radius: 10px; background: var(--btn-blue); color: #fff; font-weight: 600; transition: top .15s; }
