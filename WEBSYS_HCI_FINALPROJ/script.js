@@ -1,4 +1,4 @@
-// --- Configuration ---
+// Configuration
 let API_KEY = "";
 let YT_API_KEY = "";
 const MODEL = "gemini-3.8-flash";
@@ -13,7 +13,7 @@ try {
     console.error("Error reading config:", e);
 }
 
-// --- Application & User State ---
+// Application & User State
 let registeredUsers = [];
 try {
     const savedUsers = JSON.parse(localStorage.getItem('edumaxxing_users') || '[]');
@@ -37,7 +37,7 @@ let pendingQuizAttempts = [];
 let savedMaterialReturnView = 'subjects';
 let savedMaterialReturnSubject = null;
 
-// --- DOM Helpers ---
+//  DOM Helpers 
 function getEl(id) { return document.getElementById(id); }
 function show(el, display) { if(el) { el.classList.remove('hidden'); if(display) el.classList.add(display); } }
 function hide(el, display) { if(el) { el.classList.add('hidden'); if(display) el.classList.remove(display); } }
@@ -49,7 +49,7 @@ const iconPDF = `<svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-r
 const iconWord = `<svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>`;
 const iconText = `<svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>`;
 
-// --- Init & Theme ---
+// Init & Theme
 function initTheme() {
     const isDark = currentUser && localStorage.getItem('theme') === 'dark';
     document.documentElement.classList.toggle('dark', !!isDark);
@@ -71,7 +71,7 @@ if (currentUser) {
     showAuthScreen();
 }
 
-// --- Liquid Nav Init (formerly patch.js) ---
+// Liquid Nav Init
 (function initBottomNav() {
     const css = ".bnav-wrap{position:fixed;left:0;right:0;bottom:max(16px,env(safe-area-inset-bottom));display:flex;justify-content:center;pointer-events:none;z-index:40}.bnav{pointer-events:auto;position:relative;display:flex;width:min(92vw,380px);padding:5px;border-radius:999px;background:rgba(255,255,255,.55);-webkit-backdrop-filter:blur(28px) saturate(200%);backdrop-filter:blur(28px) saturate(200%);border:1px solid rgba(255,255,255,.75);box-shadow:0 10px 36px rgba(0,0,0,.16),inset 0 1px 0 rgba(255,255,255,.6),inset 0 -1px 0 rgba(255,255,255,.12);animation:bnavIn .8s cubic-bezier(.34,1.56,.64,1) both}.dark .bnav{background:rgba(44,44,48,.55);border-color:rgba(255,255,255,.16)}.bnav-pill{position:absolute;top:5px;bottom:5px;left:5px;width:calc((100% - 10px)/4);border-radius:999px;background:rgba(0,122,255,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.6),0 2px 10px rgba(0,122,255,.2);transform:translateX(calc(var(--i,0)*100%));transition:transform .6s cubic-bezier(.34,1.56,.64,1)}.bnav button{position:relative;z-index:1;flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0;color:#6c6c70;transition:color .3s,transform .4s cubic-bezier(.34,1.56,.64,1)}.dark .bnav button{color:#aeaeb2}.bnav button span{font-size:10.5px!important;font-weight:600!important}.bnav button:active{transform:scale(.86)}.bnav button.active{color:#007aff}.dark .bnav button.active{color:#0a84ff}.bnav button.active svg{animation:bnavPop .6s cubic-bezier(.34,1.56,.64,1)}.view-in{animation:viewIn .55s cubic-bezier(.22,1,.36,1) both}@keyframes bnavIn{from{opacity:0;transform:translateY(60px) scale(.9)}to{opacity:1;transform:none}}@keyframes bnavPop{0%{transform:scale(.7)}100%{transform:scale(1)}}@keyframes viewIn{from{opacity:0;transform:translateY(16px) scale(.985);filter:blur(5px)}to{opacity:1;transform:none;filter:none}}@media (prefers-reduced-motion:reduce){.bnav,.bnav-pill,.view-in{animation:none!important;transition:none!important}}";
     const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
@@ -106,7 +106,7 @@ function updateBottomNav(view) {
     }
 }
 
-// --- Navigation ---
+// Navigation
 function switchMainView(view) {
     const views = ['viewHome', 'viewSubjects', 'viewReviewers', 'viewMastery', 'viewProfile', 'viewStandaloneQuiz'];
     views.forEach(v => {
@@ -139,7 +139,7 @@ addEvt('startGeneratingBtn', 'click', () => {
     switchMainView('home');
 });
 
-// --- Auth ---
+//  Auth 
 let authMode = 'signin';
 function setAuthMode(mode) {
     authMode = mode;
@@ -244,7 +244,7 @@ window.logoutUser = function() {
 addEvt('drawerLogoutBtn', 'click', logoutUser);
 addEvt('profileSignOutBtn', 'click', logoutUser);
 
-// --- Data & Profile ---
+// Data & Profile 
 function getSubjectsKey() { return "edumaxxing_subjects_" + (currentUser ? currentUser.email : ""); }
 function getMaterialsKey() { return "edumaxxing_materials_" + (currentUser ? currentUser.email : ""); }
 function getStatsKey() { return "edumaxxing_stats_" + (currentUser ? currentUser.email : ""); }
@@ -305,7 +305,7 @@ addEvt('personalInfoForm', 'submit', (e) => {
     syncUserUI(); showToast('Personal info updated!');
 });
 
-// --- Menus & Modals ---
+// Menus & Modals
 addEvt('hamburgerBtn', 'click', () => {
     const ov = getEl('sideMenuOverlay'), dr = getEl('sideMenuDrawer');
     if(ov) ov.classList.remove('hidden');
@@ -338,7 +338,7 @@ function closeModal(overlay) {
     setTimeout(() => overlay.classList.add('hidden'), 250);
 }
 
-// --- Subject Management ---
+// Subject Management
 addEvt('addNewSubjectBtn', 'click', () => {
     if(getEl('newSubjectInput')) getEl('newSubjectInput').value = '';
     openModal(getEl('addSubjectModalOverlay'));
@@ -415,7 +415,7 @@ addEvt('backToSubjectsBtn', 'click', () => {
     hide(getEl('subjectDetailView')); show(getEl('subjectsMainView')); renderSubjectsGrid();
 });
 
-// --- Save Modal Enhancements ---
+//  Save Modal Enhancements 
 const sel = getEl('saveSubjectSelect');
 if (sel) {
     const wrap = document.createElement('div'); wrap.id = 'saveNewSubjectWrap'; wrap.className = 'hidden mb-6';
@@ -461,7 +461,7 @@ addEvt('confirmSaveBtn', 'click', () => {
     syncUserStorage(); closeModal(getEl('saveModalOverlay')); showToast("Saved to " + targetSubject + "!");
 });
 
-// --- Quizzes ---
+//  Quizzes 
 function renderMasteryList() {
     const items = savedMaterials.filter(material => material.quizData && material.quizData.length > 0);
     const masteryList = getEl('masteryPageList');
@@ -552,12 +552,10 @@ function renderStandaloneQuizUI() {
 
     generatedQuizData.forEach((qData, qIndex) => {
         const block = document.createElement('div'); block.className = 'bg-white dark:bg-[#2c2c2e] border border-gray-100 dark:border-gray-700 rounded-xl p-5 shadow-sm ios-card';
-        block.innerHTML = '<h3 class="text-base font-semibold mb-4"><span class="text-blue-500 mr-2">'+(qIndex + 1)+'.</span> '+qData.question+'</h3>';
-        const optionsDiv = document.createElement('div'); optionsDiv.className = 'space-y-3';
+        block.innerHTML = '<h3 class="text-base font-semibold mb-4"><span class="text-blue-500 mr-2">'+(qIndex + 1)+'.</span> '+escapeHTML(qData.question)+'</h3>';        const optionsDiv = document.createElement('div'); optionsDiv.className = 'space-y-3';
         qData.options.forEach((optText, optIndex) => {
             const label = document.createElement('label'); label.className = 'quiz-option flex items-center p-3 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-black';
-            label.innerHTML = '<input type="radio" name="sq_'+qIndex+'" value="'+optIndex+'" class="h-4 w-4 text-blue-600"><span class="ml-3 text-sm">'+optText+'</span>';
-            label.querySelector('input').addEventListener('change', (e) => {
+            label.innerHTML = '<input type="radio" name="sq_'+qIndex+'" value="'+optIndex+'" class="h-4 w-4 text-blue-600"><span class="ml-3 text-sm">'+escapeHTML(optText)+'</span>';            label.querySelector('input').addEventListener('change', (e) => {
                 optionsDiv.querySelectorAll('label').forEach(l => l.classList.remove('bg-blue-50', 'dark:bg-blue-900/30', 'border-blue-400', 'ring-1', 'ring-blue-400'));
                 label.classList.add('bg-blue-50', 'dark:bg-blue-900/30', 'border-blue-400', 'ring-1', 'ring-blue-400');
                 userAnswers[qIndex] = parseInt(e.target.value, 10);
@@ -567,8 +565,7 @@ function renderStandaloneQuizUI() {
         });
         block.appendChild(optionsDiv);
         const expDiv = document.createElement('div'); expDiv.id = 'sexp_' + qIndex; expDiv.className = 'hidden mt-4 p-3 bg-gray-50 dark:bg-black border-l-4 rounded-r-lg text-sm';
-        expDiv.innerHTML = '<span class="font-semibold block mb-1">Explanation:</span> <span class="text-gray-600 dark:text-gray-400">'+qData.explanation+'</span>';
-        block.appendChild(expDiv); w.appendChild(block);
+        expDiv.innerHTML = '<span class="font-semibold block mb-1">Explanation:</span> <span class="text-gray-600 dark:text-gray-400">'+escapeHTML(qData.explanation)+'</span>';        block.appendChild(expDiv); w.appendChild(block);
     });
 }
 
@@ -592,6 +589,7 @@ addEvt('standaloneSubmitQuizBtn', 'click', () => {
     });
 
     if(getEl('standaloneScoreValue')) getEl('standaloneScoreValue').textContent = correctCount;
+    if(getEl('standaloneScoreTotal')) getEl('standaloneScoreTotal').textContent = '/' + generatedQuizData.length;
     hide(getEl('standaloneSubmitQuizBtn')); show(getEl('standaloneScoreDisplay'), 'flex');
 
     const incorrectCount = generatedQuizData.length - correctCount;
@@ -609,7 +607,7 @@ addEvt('standaloneSubmitQuizBtn', 'click', () => {
     userStats.quizzesGraded++; syncUserStorage(); showToast('Quiz results saved!');
 });
 
-// --- API Engine ---
+// API Engine
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 const MAX_PARALLEL = 3; let activeReqs = 0; const reqQueue = [];
 const acquireReq = () => new Promise(res => { const go = () => { activeReqs++; res(); }; activeReqs < MAX_PARALLEL ? go() : reqQueue.push(go); });
@@ -728,6 +726,23 @@ addEvt('generateVideosBtn', 'click', smartVideos);
 
 async function handleFileSelect(file) {
     if (!file) return;
+
+    const MAX_BYTES = 10 * 1024 * 1024;
+    const allowedExts = /\.(png|jpe?g|webp|gif|pdf|docx|txt|md)$/i;
+    const isAllowedType = file.type.startsWith('image/') ||
+        file.type === 'application/pdf' ||
+        file.type === 'text/plain' ||
+        allowedExts.test(file.name);
+
+    if (!isAllowedType) {
+        if (getEl('fileInput')) getEl('fileInput').value = '';
+        return showToast('Unsupported file. Upload an image, PDF, Word (.docx), or TXT file.');
+    }
+    if (file.size > MAX_BYTES) {
+        if (getEl('fileInput')) getEl('fileInput').value = '';
+        return showToast('File is too large. Maximum allowed size is 10MB.');
+    }
+
     uploadId++; currentMaterialId = null; pendingQuizResult = null; pendingQuizAttempts = [];
     currentUploadedFileName = file.name; hide(getEl('saveActionHeader'));
     currentBase64Image = null; currentMimeType = null; currentText = null; currentGeneratedReviewerHTML = ""; generatedQuizData = null;
@@ -772,11 +787,11 @@ function finalizeUpload(name, type, icon, isImg) {
     hide(getEl('quizContainer'), 'flex'); show(getEl('quizEmptyState')); hide(getEl('scoreDisplay'), 'flex');
     hide(getEl('videosContainer'), 'flex'); show(getEl('videosEmptyState'));
     if(getEl('generateQuizBtn')) getEl('generateQuizBtn').disabled = false; if(getEl('generateVideosBtn')) getEl('generateVideosBtn').disabled = false;
-    switchTab('reviewer'); streamReviewer(); generateQuizFromNotes(); smartVideos();
+    switchTab('reviewer'); streamReviewer(); smartVideos();
 }
 
 function fullReset() {
-    uploadId++; // <-- This magic line instantly kills pending background generators!
+    uploadId++; //This line instantly kills pending background generators!
     
     if(getEl('fileInput')) getEl('fileInput').value = ''; 
     currentBase64Image = null; currentText = null; currentGeneratedReviewerHTML = "";
@@ -815,30 +830,53 @@ async function streamReviewer() {
 
 async function generateQuizFromNotes() {
     if (!hasSource()) return;
-    
-    // 1. Grab the current upload's unique ID
-    const myId = uploadId; 
-    
+
+    const myId = uploadId;
+    const countEl = getEl('quizCountSelect');
+    const questionCount = countEl ? (parseInt(countEl.value, 10) || 5) : 5;
+
     hide(getEl('quizEmptyState')); hide(getEl('quizContainer'), 'flex'); show(getEl('quizLoadingState'), 'flex'); startLoadingTimer('quizTimer');
-    
-    const payload = { contents: [{ role: "user", parts: [ { text: "Analyze the material and generate exactly 5 multiple-choice questions based ONLY on the core academic concepts, definitions, and theories presented. Explicitly IGNORE metadata such as course codes, syllabus titles, student names, dates, university names, or page numbers." }].concat(sourceParts()) }], generationConfig: { responseMimeType: "application/json", responseSchema: { type: "ARRAY", items: { type: "OBJECT", properties: { question: { type: "STRING" }, options: { type: "ARRAY", items: { type: "STRING" } }, correctAnswerIndex: { type: "INTEGER" }, explanation: { type: "STRING" } }, required: ["question", "options", "correctAnswerIndex", "explanation"] } } } };
-    
+
+    const payload = { contents: [{ role: "user", parts: [ { text: `Analyze the material and generate exactly ${questionCount} multiple-choice questions based ONLY on the core academic concepts, definitions, and theories presented. Cover different parts of the material so questions do not repeat. Explicitly IGNORE metadata such as course codes, syllabus titles, student names, dates, university names, or page numbers.` }].concat(sourceParts()) }], generationConfig: { responseMimeType: "application/json", responseSchema: { type: "ARRAY", items: { type: "OBJECT", properties: { question: { type: "STRING" }, options: { type: "ARRAY", items: { type: "STRING" } }, correctAnswerIndex: { type: "INTEGER" }, explanation: { type: "STRING" } }, required: ["question", "options", "correctAnswerIndex", "explanation"] } } } };
+
     try {
-        const text = await callGemini(payload); 
-        
-        // 2. If the user uploaded a new file while this was generating, silently discard this old quiz!
-        if (myId !== uploadId) return; 
-        
-        generatedQuizData = JSON.parse(text.replace(/```json|```/gi, '').trim()).slice(0, 5);
+        const text = await callGemini(payload);
+        if (myId !== uploadId) return;
+
+        generatedQuizData = JSON.parse(text.replace(/```json|```/gi, '').trim()).slice(0, questionCount);
         const ls = getEl('quizLoadingState'); if(ls) { ls.classList.add('hidden'); ls.classList.remove('flex'); }
         renderQuizUI();
-    } catch (error) { 
-        // 3. Silently discard old errors too
-        if (myId !== uploadId) return; 
-        
-        const ls = getEl('quizLoadingState'); if(ls) { ls.classList.add('hidden'); ls.classList.remove('flex'); } 
-        showToast(error.message || 'Failed to generate quiz.'); show(getEl('quizEmptyState')); 
+    } catch (error) {
+        if (myId !== uploadId) return;
+
+        const ls = getEl('quizLoadingState'); if(ls) { ls.classList.add('hidden'); ls.classList.remove('flex'); }
+        showToast(error.message || 'Failed to generate quiz.'); show(getEl('quizEmptyState'));
     }
+}
+
+function renderQuizUI() {
+    show(getEl('quizContainer'), 'flex'); const w = getEl('questionsWrapper'); if(!w) return; w.innerHTML = ''; userAnswers = {};
+    show(getEl('submitQuizBtn')); if(getEl('submitQuizBtn')) getEl('submitQuizBtn').disabled = true; hide(getEl('scoreDisplay'), 'flex');
+    generatedQuizData.forEach((qData, qIndex) => {
+        const block = document.createElement('div'); block.className = 'bg-white dark:bg-[#2c2c2e] border border-gray-100 dark:border-gray-700 rounded-xl p-5 shadow-sm ios-card';
+        block.innerHTML = '<h3 class="text-base font-semibold mb-4"><span class="text-blue-500 mr-2">'+(qIndex + 1)+'.</span> '+escapeHTML(qData.question)+'</h3>';
+        const optionsDiv = document.createElement('div'); optionsDiv.className = 'space-y-3';
+        qData.options.forEach((optText, optIndex) => {
+            const label = document.createElement('label'); label.className = 'quiz-option flex items-center p-3 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-black';
+            label.innerHTML = '<input type="radio" name="q_'+qIndex+'" value="'+optIndex+'" class="h-4 w-4 text-blue-600"><span class="ml-3 text-sm">'+escapeHTML(optText)+'</span>';
+            label.querySelector('input').addEventListener('change', (e) => {
+                optionsDiv.querySelectorAll('label').forEach(l => { l.classList.remove('bg-blue-50', 'dark:bg-blue-900/30', 'border-blue-400', 'ring-1', 'ring-blue-400'); });
+                label.classList.add('bg-blue-50', 'dark:bg-blue-900/30', 'border-blue-400', 'ring-1', 'ring-blue-400');
+                userAnswers[qIndex] = parseInt(e.target.value, 10);
+                if (Object.keys(userAnswers).length === generatedQuizData.length && getEl('submitQuizBtn')) getEl('submitQuizBtn').disabled = false;
+            });
+            optionsDiv.appendChild(label);
+        });
+        block.appendChild(optionsDiv);
+        const expDiv = document.createElement('div'); expDiv.id = 'exp_' + qIndex; expDiv.className = 'hidden mt-4 p-3 bg-gray-50 dark:bg-black border-l-4 rounded-r-lg text-sm';
+        expDiv.innerHTML = '<span class="font-semibold block mb-1">Explanation:</span> <span class="text-gray-600 dark:text-gray-400">'+escapeHTML(qData.explanation)+'</span>';
+        block.appendChild(expDiv); w.appendChild(block);
+    });
 }
 
 function renderQuizUI() {
@@ -885,6 +923,7 @@ function gradeQuizDash() {
     });
 
     if(getEl('scoreValue')) getEl('scoreValue').textContent = correctCount;
+    if(getEl('scoreTotal')) getEl('scoreTotal').textContent = '/' + generatedQuizData.length;
     hide(getEl('submitQuizBtn')); show(getEl('scoreDisplay'), 'flex');
     const incorrectCount = generatedQuizData.length - correctCount;
     const quizResult = { correctCount, incorrectCount, totalQuestions: generatedQuizData.length, gradedAt: new Date().toLocaleString() };
@@ -896,14 +935,34 @@ function gradeQuizDash() {
     userStats.quizzesGraded++; syncUserStorage();
 }
 
+
 const VID_SCHEMA = { type: 'OBJECT', properties: { topic: { type: 'STRING' }, suggestions: { type: 'ARRAY', items: { type: 'OBJECT', properties: { title: { type: 'STRING' }, query: { type: 'STRING' }, reason: { type: 'STRING' } }, required: ['title', 'query', 'reason'] } } }, required: ['topic', 'suggestions'] };
 async function smartVideos() {
     if (!hasSource()) return; const myId = uploadId;
     hide(getEl('videosEmptyState')); hide(getEl('videosContainer'), 'flex'); show(getEl('videosLoadingState'), 'flex');
-    const payload = { contents: [{ role: 'user', parts: [{ text: 'Identify the main topic of the study material and suggest 4 specific YouTube search queries (3-8 words each) that would help a student learn more. Give each a short title and one sentence on why it helps.' }].concat(sourceParts()) }], generationConfig: { responseMimeType: 'application/json', responseSchema: VID_SCHEMA } };
+    const payload = { contents: [{ role: 'user', parts: [{ text: 'Identify the main topic of the study material and suggest 4 specific YouTube search queries (3-8 words each) that would help a student learn more. Give each a short title and one sentence on why it helps. Return JSON with exact keys "topic" (string) and "suggestions" (array of {title, query, reason}).' }].concat(sourceParts()) }], generationConfig: { responseMimeType: 'application/json', responseSchema: VID_SCHEMA } };
     try {
-        const data = JSON.parse((await callGemini(payload)).replace(/```json|```/gi, '').trim());
+        const raw = JSON.parse((await callGemini(payload)).replace(/```json|```/gi, '').trim());
         if (myId !== uploadId) return;
+
+        // Safely normalize in case the local model returns an array or a slightly different key name
+        const list = Array.isArray(raw)
+            ? raw
+            : (raw && (raw.suggestions || raw.videos || raw.queries || raw.recommendations));
+        if (!Array.isArray(list) || !list.length) {
+            throw new Error('Could not extract video topics. Click "Suggest Videos" to try again.');
+        }
+        const data = {
+            topic: (raw && typeof raw.topic === 'string' && raw.topic.trim()) ? raw.topic : (currentUploadedFileName || 'Study Topic'),
+            suggestions: list.filter(it => it && (it.query || it.title)).map(it => ({
+                title: it.title || it.query,
+                query: it.query || it.title,
+                reason: it.reason || 'Helpful supplementary lecture on this topic.'
+            }))
+        };
+        if (!data.suggestions.length) {
+            throw new Error('Could not extract video topics. Click "Suggest Videos" to try again.');
+        }
         
         const key = YT_API_KEY || ''; let reason = key ? '' : 'No YouTube key found. Add YT_API_KEY to config.js.';
         const results = await Promise.all(data.suggestions.map(async (item) => {

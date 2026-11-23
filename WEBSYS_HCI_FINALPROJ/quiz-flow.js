@@ -76,7 +76,7 @@
         loadSavedMaterial(currentMaterialId, savedMaterialReturnView, savedMaterialReturnSubject, quizOrigin === 'list');
     }, true);
 
-    // ---------- Confirmation / rename pop-up (same look as the other pop-ups) ----------
+    // Confirmation / rename pop-up (same look as the other pop-ups) 
     const ov = document.createElement('div');
     ov.id = 'dialogModalOverlay';
     ov.className = 'fixed inset-0 bg-black/50 z-[70] hidden backdrop-blur-sm flex items-center justify-center transition-opacity opacity-0';
@@ -106,7 +106,7 @@
         });
     }
 
-    // ---------- Quiz record: collapsed by default, expand to see results, rename, delete ----------
+    // Quiz record: collapsed by default, expand to see results, rename, delete
     const expanded = new Set(); let shownFor = null;
     const defaultName = (i) => 'Attempt ' + (i + 1);
 
@@ -182,7 +182,7 @@
         syncUserStorage(); renderMasteryList(); renderSubjectsGrid(); showToast('Study session removed.');
     };
 
-    // ---------- Saved sessions inside a subject: Open / Edit / Delete ----------
+    //  Saved sessions inside a subject: Open / Edit / Delete 
     const rowStyle = document.createElement('style');
     rowStyle.textContent = `
     .session-row [data-act] { transition: background-color .18s ease, color .18s ease, border-color .18s ease; }

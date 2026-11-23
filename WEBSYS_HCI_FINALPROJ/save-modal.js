@@ -6,7 +6,7 @@
     const sel = getEl('saveSubjectSelect'), title = getEl('saveTitleInput'), ok = getEl('confirmSaveBtn');
     const newInput = getEl('saveNewSubjectInput'), openBtn = getEl('openSaveModalBtn');
 
-    // ---------- Styles ----------
+    //  Styles 
     const st = document.createElement('style');
     st.textContent = `
     .visually-hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
@@ -27,7 +27,7 @@
     .dark .sum-warn { color: #ffb340; }`;
     document.head.appendChild(st);
 
-    // ---------- Layout: heading, short explanation, what will be saved, subject chips ----------
+    // Layout: heading, short explanation, what will be saved, subject chips
     const h3 = card.querySelector('h3');
     h3.textContent = 'Save study session'; h3.classList.replace('mb-4', 'mb-1');
     const sub = document.createElement('p');
@@ -45,7 +45,7 @@
     sel.classList.add('visually-hidden'); sel.tabIndex = -1; sel.setAttribute('aria-hidden', 'true');   // still holds the value the app saves
     card.style.maxHeight = '90vh'; card.style.overflowY = 'auto';
 
-    // ---------- Rendering ----------
+    // Rendering 
     const chip = (kind, text) => `<span class="sum-chip sum-${kind}">${kind === 'ok' ? '✓' : '!'} ${escapeHTML(text)}</span>`;
     function renderSummary() {
         const hasReviewer = !!currentGeneratedReviewerHTML;
@@ -79,7 +79,7 @@
         ok.textContent = isNew ? 'Create & save' : `Save to “${name}”`;
     }
 
-    // ---------- Behaviour ----------
+    // Behaviour 
     openBtn.addEventListener('click', () => {         // runs after the app has opened the pop-up
         sel.innerHTML = '';                            // rebuilt safely (subject names with quotes can't break it)
         savedSubjects.forEach(s => sel.add(new Option(s, s)));

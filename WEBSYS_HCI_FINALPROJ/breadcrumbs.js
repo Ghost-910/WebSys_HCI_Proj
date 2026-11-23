@@ -1,7 +1,6 @@
 // breadcrumbs.js (v2): load AFTER quiz-flow.js. Replaces the earlier breadcrumbs.js.
 // Dashboard card hover (rounded), breadcrumb trail, browser Back support, and usability safeguards.
 (function () {
-    // =====================  STYLES  =====================
     const st = document.createElement('style');
     st.textContent = `
     /* Dashboard cards: each is its own rounded tile, so the hover outline follows the corners */
@@ -46,13 +45,11 @@
     #subjectsGrid > div.subjects-empty:hover { border-color: var(--ios-sep) !important; box-shadow: none !important; }`;
     document.head.appendChild(st);
 
-    // =====================  DASHBOARD CARDS  =====================
     document.querySelectorAll('#viewHome > section.grid > div').forEach(c => {
         c.tabIndex = 0; c.setAttribute('role', 'link');
         c.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); c.click(); } });
     });
 
-    // =====================  BREADCRUMBS + BROWSER BACK  =====================
     const bar = document.createElement('nav');
     bar.id = 'breadcrumbBar'; bar.setAttribute('aria-label', 'Breadcrumb');
     bar.className = 'max-w-7xl mx-auto w-full px-4 md:px-8 pt-3';
@@ -133,7 +130,6 @@
     mo.observe(getEl('subjectDetailTitle'), { childList: true, characterData: true, subtree: true });
     render();
 
-    // =====================  PROTECT UNSAVED WORK  =====================
     const unsaved = () => !!currentGeneratedReviewerHTML && currentMaterialId === null;
     let leaving = false;
     getEl('previewContainer').addEventListener('click', (e) => {          // "Upload New"
@@ -147,7 +143,6 @@
     }, true);
     window.addEventListener('beforeunload', (e) => { if (unsaved() && !leaving) { e.preventDefault(); e.returnValue = ''; } });
 
-    // =====================  EMPTY STATES THAT TELL YOU WHAT TO DO  =====================
     const baseSubjects = renderSubjectsGrid;
     renderSubjectsGrid = function () {
         baseSubjects();
@@ -163,7 +158,6 @@
     };
     getEl('masteryPageList').addEventListener('click', (e) => { if (e.target.closest('#emptyQuizzesBtn')) switchMainView('home'); });
 
-    // =====================  QUIZ PROGRESS ("2 of 5 answered")  =====================
     function quizProgress(wrapperId, btnId) {
         const w = getEl(wrapperId), btn = getEl(btnId); if (!w || !btn) return;
         const el = document.createElement('span'); el.className = 'quiz-progress'; el.style.marginRight = 'auto'; btn.before(el);
@@ -175,7 +169,6 @@
     quizProgress('questionsWrapper', 'submitQuizBtn');
     quizProgress('standaloneQuestionsWrapper', 'standaloneSubmitQuizBtn');
 
-    // =====================  HELP, SHORTCUTS, ACCESSIBILITY  =====================
     const help = document.createElement('div');
     help.id = 'helpModalOverlay';
     help.className = 'fixed inset-0 bg-black/50 z-50 hidden backdrop-blur-sm flex items-center justify-center transition-opacity opacity-0';

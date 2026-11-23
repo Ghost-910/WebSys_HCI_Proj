@@ -23,12 +23,11 @@
     <!-- Google Fonts & Custom Stylesheet -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="scrollbars.css">
 </head>
 <body class="bg-[#f2f2f7] dark:bg-black text-gray-800 dark:text-gray-100 antialiased min-h-screen flex flex-col transition-colors duration-300">
 
-    <!-- ==========================================================================
-         STAGE 1: FULL-SCREEN IOS AUTHENTICATION
-         ========================================================================== -->
+    
     <section id="authScreen" class="auth-screen-layout min-h-screen w-full flex items-center justify-between gap-12 px-6 py-12 md:px-12 lg:px-20 relative overflow-hidden">
         <div class="ios-blob bg-blue-500/25 dark:bg-blue-600/20 -top-20 -left-20"></div>
         <div class="ios-blob bg-purple-500/25 dark:bg-purple-600/20 bottom-0 -right-20"></div>
@@ -36,19 +35,19 @@
         <div class="auth-intro z-10">
             <span class="auth-badge">Your Personalized Study Companion</span>
             <h1>Start Edumaxxing.<span> Achieve More.</span></h1>
-            <p>Transform your static lecture photos, PDFs, and Word documents into structured reviewers, 5-item active recall quizzes, and curated video lectures.</p>
+            <p>Transform your static lecture photos, PDFs, and Word documents into structured reviewers, customizable active recall quizzes, and curated video lectures.</p>
             <div class="auth-features">
                 <div>
-                    <span class="text-blue-400"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg></span>
-                    <p> Smart Reviewers</p>
+                   <!-- <span class="text-blue-400"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg></span> -->
+                    <p> +Smart Reviewers</p>
                 </div>
                 <div>
-                    <span class="text-purple-400"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg></span>
-                    <p> Active Recall Quizzes</p>
+                    <!--<span class="text-purple-400"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg></span> -->
+                    <p> +Active Recall Quizzes</p>
                 </div>
                 <div>
-                    <span class="text-red-400"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></span>
-                    <p> Curated Video Lectures</p>
+                   <!-- <span class="text-red-400"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></span> -->
+                    <p> +Curated Video Lectures</p>
                 </div>
             </div>
         </div>
@@ -57,7 +56,7 @@
             <div class="flex flex-col items-center text-center mb-7">
                 <div class="w-16 h-16 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/30 mb-4">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-9 w-9" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477-4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                     </svg>
                 </div>
                 <h1 class="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">EduMaxxing</h1>
@@ -111,9 +110,7 @@
         </div>
     </section>
 
-    <!-- ==========================================
-         STAGE 2: WELCOME / START GENERATING SCREEN
-         ========================================== -->
+   
     <section id="welcomeScreen" class="hidden min-h-screen w-full flex-col items-center justify-center p-6 relative overflow-hidden text-center">
         <div class="ios-blob bg-blue-500/25 dark:bg-blue-500/15 top-10 left-1/4"></div>
         <div class="ios-blob bg-purple-500/25 dark:bg-purple-500/15 bottom-10 right-1/4"></div>
@@ -122,7 +119,7 @@
             <div id="welcomeAvatar" class="w-20 h-20 rounded-full bg-blue-600 text-white flex items-center justify-center text-3xl font-extrabold shadow-xl mb-6">U</div>
             <span class="text-xs font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400 bg-blue-100/80 dark:bg-blue-900/30 px-3.5 py-1.5 rounded-full mb-3">Academic Workspace Ready</span>
             <h2 class="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight mb-3">Welcome, <span id="welcomeUserName" class="text-blue-600 dark:text-blue-400">Scholar</span></h2>
-            <p class="text-gray-600 dark:text-gray-300 text-sm sm:text-base max-w-md mb-8 leading-relaxed">Transform your static lecture photos, PDFs, and Word documents into structured reviewers, 5-item active recall quizzes, and curated video lectures.</p>
+            <p class="text-gray-600 dark:text-gray-300 text-sm sm:text-base max-w-md mb-8 leading-relaxed">Transform your static lecture photos, PDFs, and Word documents into structured reviewers, customizable active recall quizzes, and curated video lectures.</p>
 
             <div class="grid grid-cols-3 gap-3 w-full mb-8 text-left">
                 <div class="p-3.5 rounded-2xl bg-gray-100/80 dark:bg-[#2c2c2e] border border-gray-200/60 dark:border-gray-700/50">
@@ -132,7 +129,7 @@
                 </div>
                 <div class="p-3.5 rounded-2xl bg-gray-100/80 dark:bg-[#2c2c2e] border border-gray-200/60 dark:border-gray-700/50">
                     <div class="text-purple-500 mb-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg></div>
-                    <p class="text-xs font-bold text-gray-900 dark:text-white">5-Item Quiz</p>
+                    <p class="text-xs font-bold text-gray-900 dark:text-white">Active Recall Quiz</p>
                     <p class="text-[11px] text-gray-500 dark:text-gray-400">Easy recall</p>
                 </div>
                 <div class="p-3.5 rounded-2xl bg-gray-100/80 dark:bg-[#2c2c2e] border border-gray-200/60 dark:border-gray-700/50">
@@ -149,9 +146,6 @@
         </div>
     </section>
 
-    <!-- ==========================================
-         STAGE 3: MAIN APPLICATION & DASHBOARD
-         ========================================== -->
     <div id="mainAppWrapper" class="hidden flex-col min-h-screen pb-28">
 
         <!-- Sticky Top iOS Navigation Bar -->
@@ -214,9 +208,7 @@
             </div>
         </div>
 
-        <!-- ==========================================
-             TAB VIEW 1: DASHBOARD (STATS + GENERATOR)
-             ========================================== -->
+
         <main id="viewHome" class="flex-grow max-w-7xl mx-auto w-full p-3 sm:p-4 md:p-8 space-y-6">
             <section class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
                 <div class="ios-card p-5 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors" onclick="switchMainView('subjects')">
@@ -332,7 +324,19 @@
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
                                 </div>
                                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Active Recall Practice Quiz</h3>
-                                <p class="text-sm text-gray-500 max-w-sm mb-5">Generate a 5-question multiple-choice quiz strictly from your study notes.</p>
+                                <p class="text-sm text-gray-500 max-w-sm mb-5">Generate a multiple-choice quiz strictly from your study notes.</p>
+
+                                <div class="flex items-center justify-center gap-3 mb-5">
+                                    <label for="quizCountSelect" class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                        Questions:
+                                    </label>
+                                    <select id="quizCountSelect" class="ios-input !w-auto !py-2 !px-3.5 text-sm font-medium">
+                                        <option value="5" selected>5 Questions</option>
+                                        <option value="10">10 Questions</option>
+                                        <option value="15">15 Questions</option>
+                                    </select>
+                                </div>
+
                                 <button id="generateQuizBtn" class="ios-btn ios-btn-purple" disabled>Generate Quiz Now</button>
                             </div>
                             <div id="quizLoadingState" class="hidden absolute inset-0 bg-white/90 dark:bg-[#1c1c1e]/90 backdrop-blur-sm flex-col items-center justify-center z-10">
@@ -347,7 +351,7 @@
                                     <div id="scoreDisplay" class="hidden items-center justify-between w-full">
                                         <div class="bg-gray-100 dark:bg-gray-800 p-3.5 rounded-2xl flex items-center gap-4">
                                             <p class="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">Final Score</p>
-                                            <p class="text-3xl font-extrabold text-gray-900 dark:text-white leading-none"><span id="scoreValue">0</span><span class="text-lg text-gray-400">/5</span></p>
+                                            <p class="text-3xl font-extrabold text-gray-900 dark:text-white leading-none"><span id="scoreValue">0</span><span id="scoreTotal" class="text-lg text-gray-400">/5</span></p>
                                         </div>
                                     </div>
                                 </div>
@@ -358,9 +362,6 @@
             </div>
         </main>
 
-        <!-- ==========================================
-             TAB VIEW: MY QUIZZES
-             ========================================== -->
         <main id="viewMastery" class="hidden flex-grow max-w-7xl mx-auto w-full p-4 md:p-8">
             <div class="mb-6">
                 <h1 class="text-2xl font-bold text-gray-900 dark:text-white">My Quizzes</h1>
@@ -369,9 +370,6 @@
             <div id="masteryPageList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
         </main>
 
-        <!-- ==========================================
-             TAB VIEW 2: SUBJECTS & SAVED MATERIALS
-             ========================================== -->
         <main id="viewSubjects" class="hidden flex-grow max-w-7xl mx-auto w-full p-4 md:p-8">
             <div id="subjectsMainView" class="w-full">
                 <div class="flex justify-between items-end mb-8 border-b border-gray-200 dark:border-gray-800 pb-4">
@@ -394,9 +392,6 @@
             </div>
         </main>
 
-        <!-- ==========================================
-             TAB VIEW: SAVED REVIEWER READER
-             ========================================== -->
         <main id="viewReviewers" class="hidden flex-grow max-w-4xl mx-auto w-full p-4 md:p-8">
             <div id="savedReviewerReader">
                 <button id="backToSubjectsFromReaderBtn" class="text-blue-500 hover:underline mb-6 font-semibold text-sm flex items-center gap-1 transition-opacity hover:opacity-75">
@@ -421,9 +416,7 @@
             </div>
         </main>
 
-        <!-- ==========================================
-             TAB VIEW: STANDALONE QUIZ MODE
-             ========================================== -->
+
         <main id="viewStandaloneQuiz" class="hidden flex-grow max-w-3xl mx-auto w-full p-4 md:p-8">
             <button id="backToReviewerFromQuizBtn" class="text-blue-500 hover:underline mb-6 font-semibold text-sm flex items-center gap-1 transition-opacity hover:opacity-75">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
@@ -440,15 +433,12 @@
                 <div id="standaloneScoreDisplay" class="hidden items-center justify-between w-full">
                     <div class="bg-gray-100 dark:bg-gray-800 p-3.5 rounded-2xl flex items-center gap-4">
                         <p class="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">Final Score</p>
-                        <p class="text-3xl font-extrabold text-gray-900 dark:text-white leading-none"><span id="standaloneScoreValue">0</span><span class="text-lg text-gray-400">/5</span></p>
+                        <p class="text-3xl font-extrabold text-gray-900 dark:text-white leading-none"><span id="standaloneScoreValue">0</span><span id="standaloneScoreTotal" class="text-lg text-gray-400">/5</span></p>
                     </div>
                 </div>
             </div>
         </main>
 
-        <!-- ==========================================
-             TAB VIEW 3: PERSONAL INFO DASHBOARD
-             ========================================== -->
         <main id="viewProfile" class="hidden flex-grow max-w-4xl mx-auto w-full p-4 md:p-8 space-y-6">
             <div class="border-b border-gray-200 dark:border-gray-800 pb-4">
                 <h2 class="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Personal Info</h2>
@@ -560,6 +550,8 @@
     <script src="ollama.js"></script>
     <script src="save-modal.js"></script>
     <script src="quiz-flow.js"></script>
+    <script src="ui-enhancements.js"></script>
     <script src="breadcrumbs.js"></script>
+    <script src="auth.js"></script>
 </body>
 </html>

@@ -1,7 +1,4 @@
-// ollama.js: run EduMaxxing on a local model through Ollama instead of Gemini.
-// Load AFTER script.js:  <script src="ollama.js"></script>
 (function () {
-    // =====================  SETTINGS (change these)  =====================
     const OLLAMA_URL = 'http://localhost:11434';
     const TEXT_MODEL = 'gemma4:e4b-it-qat';       
     const VISION_MODEL = 'gemma4:e4b-it-qat';   
@@ -9,7 +6,6 @@
     const MAX_PARALLEL = 1;                
     const MAX_CHARS = Math.floor(NUM_CTX * 2.6);
 
-    // =====================  Helpers  =====================
     // Updated to catch both Qwen and Gemma 2/4 internal thought formatting
     const stripThink = (t) => t.replace(/<\|channel>thought\\n[\s\S]*?(?=\[Final answer\]|<\|)/g, '').replace(/<think>[\s\S]*?<\/think>/g, '').replace(/<think>[\s\S]*$/, '').trim();
     
@@ -20,7 +16,7 @@
     const acquire = () => new Promise(r => { const go = () => { active++; r(); }; active < MAX_PARALLEL ? go() : queue.push(go); });
     const release = () => { active--; const n = queue.shift(); if (n) n(); };
 
-    // ----- PDFs: Ollama can't read them, so read the text in the browser -----
+    // PDFs: Ollama can't read them, so read the text in the browser 
     const pdfCache = new Map();
     async function loadPdfJs() {
         if (window.pdfjsLib) return;
@@ -56,38 +52,40 @@
         pdfCache.set(key, p); return p;
     }
 
-    // ----- Turn the app's Gemini-style request into an Ollama request -----
-    async function build(payload, stream) {
-        const parts = (payload.contents || []).flatMap(c => c.parts || []);
-        let instr = '', material = '', images = [];
-        for (const p of parts) {
-            if (p.inlineData) {
-                if (p.inlineData.mimeType === 'application/pdf') { const r = await readPdf(p.inlineData.data); material += r.text + '\n'; images.push(...r.images); }
-                else images.push(p.inlineData.data);
-            } else if (typeof p.text === 'string') {
-                if (p.text.startsWith('STUDY MATERIAL:')) material += p.text.slice(15) + '\n'; else instr += p.text + '\n';
-            }
+// Turn the app's Gemini-style request into an Ollama request 
+async function build(payload, stream) {
+    const parts = (payload.contents || []).flatMap(c => c.parts || []);
+    let instr = '', material = '', images = [];
+    for (const p of parts) {
+        if (p.inlineData) {
+            if (p.inlineData.mimeType === 'application/pdf') { const r = await readPdf(p.inlineData.data); material += r.text + '\n'; images.push(...r.images); }
+            else images.push(p.inlineData.data);
+        } else if (typeof p.text === 'string') {
+            if (p.text.startsWith('STUDY MATERIAL:')) material += p.text.slice(15) + '\n'; else instr += p.text + '\n';
         }
-        material = material.trim().slice(0, MAX_CHARS);
-        const schema = payload.generationConfig && payload.generationConfig.responseSchema;
-        
-        // STRICT FORMATTING OVERRIDE
-        let formatInstructions = schema 
-            ? '\n\nCRITICAL: Reply with JSON only, matching the required structure. No markdown formatting or conversational text.' 
-            : '\n\nCRITICAL: Do NOT use LaTeX, math blocks, or special formatting tags like $ or \\to. Use standard keyboard characters only (e.g., -> for arrows, ^ for exponents).';
-
-        const content = (material ? `STUDY MATERIAL:\n${material}\n\n---\n` : '') + instr.trim() + formatInstructions;
-        const msg = { role: 'user', content }; if (images.length) msg.images = images;
-        
-        return {
-            model: images.length ? VISION_MODEL : TEXT_MODEL, stream,
-            messages: [{ 
-                role: 'system', 
-                content: 'You are a strict data-extraction professor. Analyze the study material and extract key academic concepts. Explicitly ignore metadata like course codes, student names, or syllabus headers. CRITICAL RULES: 1. You MUST transcribe ONLY the exact handwritten Target Strings and Production Rules visible in the image. DO NOT invent textbook examples. 2. NO LaTeX or dollar signs ($). Write math as plain text. 3. Be concise and output ONLY the requested HTML study guide using <h3>, <ul>, <li>, <p>, <strong> with NO conversational filler. Do not use markdown code blocks.' 
-            }, msg],            ...(schema ? { format: lower(schema) } : {}),
-            options: { num_ctx: NUM_CTX, temperature: 0.25 }, keep_alive: '30m'
-        };
     }
+    material = material.trim().slice(0, MAX_CHARS);
+    const schema = payload.generationConfig && payload.generationConfig.responseSchema;
+    
+    // STRICT FORMATTING OVERRIDE
+    let formatInstructions = schema 
+        ? '\n\nCRITICAL: Reply with JSON only, matching the required structure. No markdown formatting or conversational text.' 
+        : '\n\nCRITICAL: Do NOT use LaTeX, math blocks, or special formatting tags like $ or \\to. Use standard keyboard characters only (e.g., -> for arrows, ^ for exponents).';
+
+    const content = (material ? `STUDY MATERIAL:\n${material}\n\n---\n` : '') + instr.trim() + formatInstructions;
+    const msg = { role: 'user', content }; if (images.length) msg.images = images;
+
+    const systemPrompt = schema
+        ? 'You are a strict academic assistant. Extract information ONLY from the provided study material. Explicitly ignore metadata like course codes, student names, dates, or syllabus headers. Reply with valid JSON only, matching the required schema. No markdown code blocks or conversational text.'
+        : 'You are a strict academic professor. Analyze the provided study material and extract key academic concepts accurately. Explicitly ignore metadata like course codes, student names, dates, or syllabus headers. CRITICAL RULES: 1. Rely ONLY on the exact content visible in the provided text or image—do NOT invent outside examples. 2. NO LaTeX or dollar signs ($); write math and symbols as plain text (e.g., -> for arrows, ^ for exponents). 3. Output ONLY the requested HTML study guide using <h3>, <ul>, <li>, <p>, <strong> with NO conversational filler and NO markdown code blocks.';
+
+    return {
+        model: images.length ? VISION_MODEL : TEXT_MODEL, stream,
+        messages: [{ role: 'system', content: systemPrompt }, msg],
+        ...(schema ? { format: lower(schema) } : {}),
+        options: { num_ctx: NUM_CTX, temperature: 0.25 }, keep_alive: '30m'
+    };
+}
 
     async function post(body) {
         let r;
@@ -101,11 +99,11 @@
         return r;
     }
 
-  // ----- Save the original Gemini functions as backups -----
+  // Save the original Gemini functions as backups 
   const originalCallGemini = window.callGemini;
   const originalGemStream = window.gemStream;
 
-  // ----- Replace the functions with an Automatic Fallback system -----
+  // Replace the functions with an Automatic Fallback system 
   window.callGemini = async function (payload) {
       await acquire();
       try {
@@ -158,7 +156,7 @@
       }
   };
 
-  // ----- Friendly heads-up on startup -----
+  // Friendly heads-up on startup 
   setTimeout(() => {
       fetch(OLLAMA_URL + '/api/tags').then(r => r.json()).then(j => {
           const names = (j.models || []).map(m => m.name);

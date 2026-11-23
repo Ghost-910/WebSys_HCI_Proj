@@ -1,9 +1,3 @@
-
-/* ==========================================================================
-   1. THEME & COLOR VARIABLES
-   Defines light mode (:root) and dark mode (.dark) colors.
-   Button colors (--btn-*) are darkened to meet WCAG AA contrast standards.
-   ========================================================================== */
    :root {
     --ios-blue: #007aff;
     --ios-green: #34c759;
@@ -42,10 +36,6 @@
     --line: #636366;
 }
 
-/* ==========================================================================
-   2. BASE TYPOGRAPHY & ACCESSIBILITY
-   Sets system fonts, keyboard focus rings, and pointer cursors on clickable items.
-   ========================================================================== */
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', sans-serif;
     font-size: 16px;
@@ -67,10 +57,6 @@ a,
     cursor: pointer;
 }
 
-/* ==========================================================================
-   3. READABLE TEXT OVERRIDES
-   Boosts text contrast, enforces a 12px minimum font size, and removes forced uppercase.
-   ========================================================================== */
 .text-gray-400,
 .text-gray-500,
 .text-gray-600 {
@@ -105,10 +91,6 @@ a,
     opacity: 1;
 }
 
-/* ==========================================================================
-   4. VISUAL DECLUTTERING
-   Hides decorative background blobs, gradients, and non-essential icons.
-   ========================================================================== */
 .ios-blob {
     display: none;
 }
@@ -131,10 +113,6 @@ a,
     padding: 4px !important;
 }
 
-/* ==========================================================================
-   5. SURFACES, CARDS & NAVIGATION BAR
-   Styles main content cards, modals, frosted-glass navbar, and unified stat bars.
-   ========================================================================== */
 .ios-card {
     background: var(--ios-card-bg);
     border: 1px solid var(--ios-sep);
@@ -180,10 +158,6 @@ a,
     box-shadow: inset -1px -1px 0 var(--ios-sep) !important;
 }
 
-/* ==========================================================================
-   6. FORM INPUTS
-   Styles text inputs and select dropdowns with focus ring animations.
-   ========================================================================== */
 .ios-input {
     width: 100%;
     padding: 12px 15px;
@@ -201,10 +175,6 @@ a,
     box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);
 }
 
-/* ==========================================================================
-   7. BUTTONS & DISABLED STATE HINTS
-   Enforces 44px touch targets, color variants, and explains why disabled buttons are locked.
-   ========================================================================== */
 .ios-btn {
     display: inline-flex;
     align-items: center;
@@ -311,10 +281,6 @@ a,
     font-weight: 600;
 }
 
-/* ==========================================================================
-   8. SEGMENTED CONTROL TABS
-   Styles the iOS-style tab switcher for Auth modes and Reviewer/Quiz/Video views.
-   ========================================================================== */
 .ios-segment {
     display: flex;
     gap: 2px;
@@ -356,10 +322,6 @@ a,
     color: #64a8ff;
 }
 
-/* ==========================================================================
-   9. FILE UPLOAD AREA
-   Styles the dashed dropzone and injects a visual "Browse files" button.
-   ========================================================================== */
 #uploadArea {
     border: 2px dashed var(--btn-blue) !important;
     border-radius: 14px !important;
@@ -384,10 +346,6 @@ a,
     font-weight: 600;
 }
 
-/* ==========================================================================
-   10. SUBJECT CARDS & FOLDER ACTIONS
-   Adds hover states, "Open ›" indicators, and labeled Rename/Delete buttons.
-   ========================================================================== */
 #subjectsGrid > div {
     transition: border-color 0.15s, box-shadow 0.15s;
 }
@@ -450,10 +408,6 @@ a,
     }
 }
 
-/* ==========================================================================
-   11. INTERACTIVE QUIZ & VIDEO CARDS
-   Styles multiple-choice options, radio buttons, grading badges, and video items.
-   ========================================================================== */
 .quiz-option {
     min-height: 48px;
     border: 1.5px solid var(--line) !important;
@@ -506,10 +460,6 @@ a,
     border-radius: 12px !important;
 }
 
-/* ==========================================================================
-   12. LOADER, REVIEWER CONTENT & RESPONSIVE HELPERS
-   Animates the loading spinner, formats AI-generated HTML notes, and handles mobile/motion rules.
-   ========================================================================== */
 .loader {
     width: 36px;
     height: 36px;
@@ -616,10 +566,6 @@ a,
     border-color: var(--btn-red);
     filter: none;
 }
-
-/* =====================================
-   AUTHENTICATION SPLIT-SCREEN LAYOUT
-===================================== */
 
 .auth-screen-layout {
     display: flex;
