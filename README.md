@@ -65,23 +65,23 @@ Uses an iOS-inspired segmented control paired with a persistent source preview c
 ## Project Structure
 
 ```text
-WEBSYS_HCI_FINALPROJ/
-├── index.html              # Main SPA layout, modals, segmented workspace, and navigation
-├── style.css               # Custom glassmorphism styles, dark mode tokens, and animations
-├── scrollbars.css          # Custom cross-browser scrollbar styling
-├── script.js               # Core state management, file parsing, reviewer/quiz/video logic
-├── ollama.js               # Local Ollama client with automatic Google Gemini API failover
-├── auth.js                 # Firebase Authentication (Email/Password & Google Sign-In)
-├── branding.js             # Brand logo and visual identity helpers
-├── quiz-flow.js            # Quiz submission guards, scoring logic, and attempt persistence
-├── save-modal.js           # Modal flow for saving reviewers and quizzes to subjects
-├── breadcrumbs.js          # Hierarchical breadcrumb navigation for Subjects and Quizzes
-├── ui-enhancements.js      # Progress bars, quiz controls, modals/shortcuts, and UX polish
-├── Photos/                 # Brand logo and visual/image assets
-├── config.example.js       # Template configuration file for API keys and Firebase settings
-├── config.js               # Local credentials (gitignored — do not commit)
-├── .gitignore              # Ignored files and local configuration rules
-└── README.md               # Project documentation
+WebSys_HCI_Proj/
+├── README.md                   # Project documentation (rendered on GitHub home)
+└── WEBSYS_HCI_FINALPROJ/
+    ├── index.html              # Main SPA layout, modals, segmented workspace, and navigation
+    ├── style.css               # Custom glassmorphism styles, dark mode tokens, and animations
+    ├── scrollbars.css          # Custom cross-browser scrollbar styling
+    ├── script.js               # Core state management, file parsing, reviewer/quiz/video logic
+    ├── ollama.js               # Local Ollama client with automatic Google Gemini API failover
+    ├── auth.js                 # Firebase Authentication (Email/Password & Google Sign-In)
+    ├── branding.js             # Brand logo and visual identity helpers
+    ├── quiz-flow.js            # Quiz submission guards, scoring logic, and attempt persistence
+    ├── save-modal.js           # Modal flow for saving reviewers and quizzes to subjects
+    ├── breadcrumbs.js          # Hierarchical breadcrumb navigation for Subjects and Quizzes
+    ├── ui-enhancements.js      # Progress bars, quiz controls, modals/shortcuts, and UX polish
+    ├── Photos/                 # Brand logo and visual/image assets
+    ├── config.example.js       # Template configuration file for API keys and Firebase settings
+    └── .gitignore              # Ignored files and local configuration rules
 ```
 
 ---
