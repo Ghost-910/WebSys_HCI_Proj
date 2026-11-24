@@ -4,8 +4,9 @@
     // Shared Print & Progress Bar Styles
     const style = document.createElement('style');
     style.textContent = `
-        .ux-progress-track { height: 6px; border-radius: 999px; background: rgba(120,120,128,.16); overflow: hidden; }
-        .ux-progress-fill { height: 100%; width: 0%; border-radius: 999px; background: linear-gradient(90deg, #007aff, #af52de); transition: width .25s ease; }
+        .ux-progress-track { height: 8px; border-radius: 999px; background: rgba(120,120,128,.16); overflow: hidden; }
+        .ux-progress-fill { height: 100%; width: 0%; border-radius: 999px; background: #007aff; transition: width .3s cubic-bezier(.4,0,.2,1), background-color .3s ease; }
+        .ux-progress-fill.is-done { background: #34c759; }
         #uxPrintArea { display: none; }
         @media print {
             body > *:not(#uxPrintArea) { display: none !important; }

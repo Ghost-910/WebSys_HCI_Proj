@@ -968,7 +968,7 @@ function renderQuizUI() {
                 optionsDiv.querySelectorAll('label').forEach(l => { l.classList.remove('bg-blue-50', 'dark:bg-blue-900/30', 'border-blue-400', 'ring-1', 'ring-blue-400'); });
                 label.classList.add('bg-blue-50', 'dark:bg-blue-900/30', 'border-blue-400', 'ring-1', 'ring-blue-400');
                 userAnswers[qIndex] = parseInt(e.target.value, 10);
-                if (Object.keys(userAnswers).length === generatedQuizData.length && getEl('submitQuizBtn')) getEl('submitQuizBtn').disabled = false;
+                if (Object.keys(userAnswers).length === dashQuizData.length && getEl('submitQuizBtn')) getEl('submitQuizBtn').disabled = false;
             });
             optionsDiv.appendChild(label);
         });
@@ -988,6 +988,9 @@ function gradeQuizDash() {
             missedQuizQuestions = missedQuizQuestions.filter(q => q !== qData.question);
         } else if (!missedQuizQuestions.includes(qData.question)) {
             missedQuizQuestions.push(qData.question);
+        }
+        const block = w ? w.children[qIndex] : null;
+        if (block) {
             block.querySelectorAll('input').forEach(r => r.disabled = true);
             block.querySelectorAll('label').forEach((label, optIndex) => {
                 label.className = 'flex items-center p-3 rounded-lg border opacity-70 cursor-default quiz-option';
@@ -996,16 +999,18 @@ function gradeQuizDash() {
                 else label.classList.add('border-gray-200', 'dark:border-gray-700');
             });
         }
-        const exp = getEl('exp_' + qIndex); if(exp){ exp.classList.remove('hidden'); exp.classList.add(isCorrect ? 'border-green-500' : 'border-red-400'); }
+        const exp = getEl('exp_' + qIndex); if (exp) { exp.classList.remove('hidden'); exp.classList.add(isCorrect ? 'border-green-500' : 'border-red-400'); }
     });
 
-    if(getEl('scoreValue')) getEl('scoreValue').textContent = correctCount;
-    if(getEl('scoreTotal')) getEl('scoreTotal').textContent = '/' + generatedQuizData.length;
+    if (getEl('scoreValue')) getEl('scoreValue').textContent = correctCount;
+    if (getEl('scoreTotal')) getEl('scoreTotal').textContent = '/' + dashQuizData.length;
     hide(getEl('submitQuizBtn')); show(getEl('scoreDisplay'), 'flex');
-    const incorrectCount = generatedQuizData.length - correctCount;
-    const quizResult = { correctCount, incorrectCount, totalQuestions: generatedQuizData.length, gradedAt: new Date().toLocaleString() };
-    const quizAttempt = { answers: Object.assign({}, userAnswers), correctCount, incorrectCount, totalQuestions: generatedQuizData.length, gradedAt: quizResult.gradedAt };
-    ipendingQuizResult = quizResult;
+
+    const incorrectCount = dashQuizData.length - correctCount;
+    const quizResult = { correctCount, incorrectCount, totalQuestions: dashQuizData.length, gradedAt: new Date().toLocaleString() };
+    const quizAttempt = { answers: Object.assign({}, userAnswers), correctCount, incorrectCount, totalQuestions: dashQuizData.length, gradedAt: quizResult.gradedAt };
+
+    pendingQuizResult = quizResult;
     pendingQuizAttempts.push(quizAttempt);
     if (dashMaterialId !== null) {
         const savedItem = savedMaterials.find(m => m.id === dashMaterialId);
@@ -1015,6 +1020,7 @@ function gradeQuizDash() {
             savedItem.quizAttempts.push(quizAttempt);
         }
     }
+    userStats.quizzesGraded++; syncUserStorage();
 }
 
 
