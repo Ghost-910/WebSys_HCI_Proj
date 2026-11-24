@@ -1,4 +1,5 @@
 (function () {
+    if (!['localhost', '127.0.0.1'].includes(location.hostname)) return;
     const OLLAMA_URL = 'http://localhost:11434';
     const TEXT_MODEL = 'gemma4:e4b-it-qat';       
     const VISION_MODEL = 'gemma4:e4b-it-qat';   
@@ -119,13 +120,12 @@ async function build(payload, stream) {
 
           if (!t) throw new Error('Empty answer from Ollama');
           return t;
-      } catch (error) {
-          console.warn("Ollama failed. Rerouting to Gemini...", error);
-          showToast("Ollama unavailable. Falling back to Google Gemini...");
-          return await originalCallGemini(payload); // Trigger the backup!
-      } finally { 
-          release(); 
-      }
+        } catch (error) {
+            console.warn("Ollama failed. Rerouting to Gemini...", error);
+            return await originalCallGemini(payload); // Trigger the backup!
+        } finally { 
+            release(); 
+        }
   };
 
   window.gemStream = async function (payload, onChunk) {   
@@ -147,24 +147,23 @@ async function build(payload, stream) {
               }
           }
           if (!any) throw new Error('Empty answer from Ollama');
-      } catch (error) {
-          console.warn("Ollama failed. Rerouting to Gemini stream...", error);
-          showToast("Ollama unavailable. Falling back to Google Gemini...");
-          await originalGemStream(payload, onChunk); // Trigger the backup!
-      } finally { 
-          release(); 
-      }
+        } catch (error) {
+            console.warn("Ollama failed. Rerouting to Gemini stream...", error);
+            await originalGemStream(payload, onChunk); // Trigger the backup!
+        } finally { 
+            release(); 
+        }
   };
 
-  // Friendly heads-up on startup 
+   
   setTimeout(() => {
-      fetch(OLLAMA_URL + '/api/tags').then(r => r.json()).then(j => {
-          const names = (j.models || []).map(m => m.name);
-          if (!names.some(n => n === TEXT_MODEL || n.startsWith(TEXT_MODEL)))
-              showToast(`Ollama model missing. App will automatically use Google Gemini as a backup.`);
-      }).catch(() => {
-          showToast(`Ollama is offline. App will automatically use Google Gemini as a backup.`);
-      });
-  }, 1500);
+    fetch(OLLAMA_URL + '/api/tags').then(r => r.json()).then(j => {
+        const names = (j.models || []).map(m => m.name);
+        if (!names.some(n => n === TEXT_MODEL || n.startsWith(TEXT_MODEL)))
+            console.info(`[AI] Ollama model "${TEXT_MODEL}" not installed. Using Gemini cloud fallback.`);
+    }).catch(() => {
+        console.info('[AI] Local Ollama offline. Using Gemini cloud fallback.');
+    });
+}, 1500);
   console.info('EduMaxxing: configured with Ollama (Primary) and Gemini (Backup)');
 })();
