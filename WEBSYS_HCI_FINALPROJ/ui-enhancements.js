@@ -141,12 +141,18 @@
         scoreDisplay.appendChild(actions);
 
         getEl('uxRetakeDashQuizBtn').addEventListener('click', () => {
-            if (typeof renderQuizUI === 'function' && Array.isArray(generatedQuizData) && generatedQuizData.length) {
+            if (typeof renderQuizUI === 'function' && Array.isArray(dashQuizData) && dashQuizData.length) {
                 renderQuizUI();
             }
         });
 
         getEl('uxNewDashQuizBtn').addEventListener('click', () => {
+            dashMaterialId = null;
+            dashQuizData = null;
+            currentMaterialId = null;
+            generatedQuizData = null;
+            pendingQuizResult = null;
+            pendingQuizAttempts = [];
             hide(getEl('quizContainer'), 'flex');
             hide(getEl('scoreDisplay'), 'flex');
             show(getEl('quizEmptyState'));
@@ -159,7 +165,7 @@
             e.stopImmediatePropagation();
             e.preventDefault();
 
-            const isSaved = currentMaterialId !== null;
+            const isSaved = dashMaterialId !== null;
             const ok = await uxConfirm({
                 title: isSaved ? 'Clear current workspace?' : 'Clear unsaved study material?',
                 message: isSaved
@@ -177,7 +183,7 @@
                 });
 
                 // Reset remaining session state and disable generate buttons until a new file is uploaded
-                currentMaterialId = null;
+                currentMaterialId = null; dashMaterialId = null; dashQuizData = null;
                 generatedQuizData = null;
                 hide(getEl('scoreDisplay'), 'flex');
                 if (getEl('generateQuizBtn')) getEl('generateQuizBtn').disabled = true;

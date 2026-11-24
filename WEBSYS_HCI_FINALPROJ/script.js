@@ -1,7 +1,12 @@
 // Configuration
 let API_KEY = "";
 let YT_API_KEY = "";
-const MODEL = "gemini-3.8-flash";
+const GEMINI_MODELS = [
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite",
+    "gemini-3.8-flash",
+    "gemini-3.6-flash"
+];
 const MAX_TEXT_CHARS = 60000;
 
 try {
@@ -32,6 +37,10 @@ let savedMaterials = JSON.parse(localStorage.getItem(getMaterialsKey()) || '[]')
 let userStats = JSON.parse(localStorage.getItem(getStatsKey()) || '{"uploads":0,"quizzesGraded":0}');
 
 let currentMaterialId = null;
+let dashMaterialId = null;
+let dashQuizData = null;
+let previousQuizQuestions = [];
+let missedQuizQuestions = [];
 let pendingQuizResult = null;
 let pendingQuizAttempts = [];
 let savedMaterialReturnView = 'subjects';
@@ -429,7 +438,9 @@ if (sel) {
         sel.appendChild(new Option('+ Create new subject...', '__new__'));
         if (!savedSubjects.length) sel.value = '__new__';
         input.value = ''; sync();
-        if(getEl('saveTitleInput')) getEl('saveTitleInput').value = currentUploadedFileName ? currentUploadedFileName.replace(/\.[^/.]+$/, '') : 'Study Session';
+        const baseTitle = currentUploadedFileName ? currentUploadedFileName.replace(/\.[^/.]+$/, '') : 'Study Session';
+        const sameCount = savedMaterials.filter(m => m.title === baseTitle || m.title.startsWith(baseTitle + ' (Quiz ')).length;
+        if (getEl('saveTitleInput')) getEl('saveTitleInput').value = sameCount > 0 ? `${baseTitle} (Quiz ${sameCount + 1})` : baseTitle;
         openModal(getEl('saveModalOverlay'));
         if (sel.value === '__new__') setTimeout(() => input.focus(), 300);
     });
@@ -455,10 +466,22 @@ addEvt('confirmSaveBtn', 'click', () => {
     const targetSubject = getEl('saveSubjectSelect') ? getEl('saveSubjectSelect').value : '';
     const tEl = getEl('saveTitleInput');
     const title = tEl ? (tEl.value.trim() || 'Study Session') : 'Study Session';
-    const newMaterial = { id: Date.now(), title, subject: targetSubject, date: new Date().toLocaleDateString(), reviewerHTML: currentGeneratedReviewerHTML, quizData: generatedQuizData, quizResult: pendingQuizResult, quizAttempts: pendingQuizAttempts.slice() };
+    const newMaterial = {
+        id: Date.now(),
+        title,
+        subject: targetSubject,
+        date: new Date().toLocaleDateString(),
+        reviewerHTML: currentGeneratedReviewerHTML,
+        quizData: Array.isArray(dashQuizData) ? dashQuizData.slice() : null,
+        quizResult: pendingQuizResult ? Object.assign({}, pendingQuizResult) : null,
+        quizAttempts: pendingQuizAttempts.slice()
+    };
     savedMaterials.push(newMaterial);
-    currentMaterialId = newMaterial.id; pendingQuizResult = null; pendingQuizAttempts = [];
-    syncUserStorage(); closeModal(getEl('saveModalOverlay')); showToast("Saved to " + targetSubject + "!");
+    dashMaterialId = newMaterial.id;
+    currentMaterialId = newMaterial.id;
+    syncUserStorage(); renderSubjectsGrid(); renderMasteryList();
+    closeModal(getEl('saveModalOverlay'));
+    showToast("Saved to " + targetSubject + "!");
 });
 
 //  Quizzes 
@@ -637,31 +660,78 @@ async function fetchRetry(url, payload) {
     }
 }
 
-async function callGemini(payload) {
+async function runGeminiModelChain(fnPerModel) {
+    if (!API_KEY) throw new Error('Gemini key missing. Add it to config.js.');
     await acquireReq();
     try {
-        const j = await (await fetchRetry("https://generativelanguage.googleapis.com/v1beta/models/" + MODEL + ":generateContent?key=" + API_KEY, payload)).json();
-        if(!j.candidates || !j.candidates[0].content.parts[0].text) throw new Error("Empty response");
-        return j.candidates[0].content.parts[0].text;
-    } finally { releaseReq(); }
+        let lastErr = null;
+        for (const model of GEMINI_MODELS) {
+            try {
+                return await fnPerModel(model);
+            } catch (err) {
+                lastErr = err;
+                console.warn(`[Gemini] ${model} failed, trying next model:`, err.message || err);
+            }
+        }
+        throw lastErr || new Error('All Gemini fallback models failed.');
+    } finally {
+        releaseReq();
+    }
+}
+
+async function callGemini(payload) {
+    return await runGeminiModelChain(async (model) => {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${API_KEY}`;
+        const r = await fetchRetry(url, payload);
+        const j = await r.json();
+        const text = j?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!text) throw new Error(`Empty response from ${model}`);
+        return text;
+    });
 }
 
 async function gemStream(payload, onChunk) {
-    await acquireReq();
-    try {
-        const r = await fetchRetry("https://generativelanguage.googleapis.com/v1beta/models/" + MODEL + ":streamGenerateContent?alt=sse&key=" + API_KEY, payload);
-        const reader = r.body.getReader(), dec = new TextDecoder(); let buf = '', any = false;
+    return await runGeminiModelChain(async (model) => {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${API_KEY}`;
+        const r = await fetchRetry(url, payload);
+        const reader = r.body.getReader(), dec = new TextDecoder();
+        let buf = '', any = false, finishReason = null;
+
+        const processLine = (rawLine) => {
+            const line = rawLine.trim();
+            if (!line.startsWith('data:')) return;
+            try {
+                const parsed = JSON.parse(line.slice(5));
+                const cand = parsed?.candidates?.[0];
+                if (cand?.finishReason) finishReason = cand.finishReason;
+                const t = (cand?.content?.parts || [])
+                    .filter(p => !p.thought)
+                    .map(p => p.text || '')
+                    .join('');
+                if (t) {
+                    any = true;
+                    onChunk(t);
+                }
+            } catch (_) { }
+        };
+
         for (;;) {
-            const res = await reader.read(); if (res.done) break;
-            buf += dec.decode(res.value, { stream: true }); let i;
+            const res = await reader.read();
+            if (res.done) break;
+            buf += dec.decode(res.value, { stream: true });
+            let i;
             while ((i = buf.indexOf('\n')) >= 0) {
-                const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
-                if (!line.startsWith('data:')) continue;
-                try { const t = (JSON.parse(line.slice(5)).candidates[0].content.parts || []).map(p => p.text || '').join(''); if (t) { any = true; onChunk(t); } } catch (_) { }
+                processLine(buf.slice(0, i));
+                buf = buf.slice(i + 1);
             }
         }
-        if (!any) throw new Error('Empty response');
-    } finally { releaseReq(); }
+        buf += dec.decode();
+        if (buf.trim()) processLine(buf);
+
+        console.info(`[Gemini] ${model} stream ended — finishReason: ${finishReason || 'unknown'}`);
+        if (!any) throw new Error(`Empty stream from ${model}`);
+        if (finishReason === 'RECITATION') throw new Error(`RECITATION stop on ${model}`);
+    });
 }
 
 function cleanHtml(html) {
@@ -743,7 +813,7 @@ async function handleFileSelect(file) {
         return showToast('File is too large. Maximum allowed size is 10MB.');
     }
 
-    uploadId++; currentMaterialId = null; pendingQuizResult = null; pendingQuizAttempts = [];
+    uploadId++; currentMaterialId = null; dashMaterialId = null; dashQuizData = null; pendingQuizResult = null; pendingQuizAttempts = []; previousQuizQuestions = [];
     currentUploadedFileName = file.name; hide(getEl('saveActionHeader'));
     currentBase64Image = null; currentMimeType = null; currentText = null; currentGeneratedReviewerHTML = ""; generatedQuizData = null;
     userStats.uploads++; syncUserStorage();
@@ -787,14 +857,18 @@ function finalizeUpload(name, type, icon, isImg) {
     hide(getEl('quizContainer'), 'flex'); show(getEl('quizEmptyState')); hide(getEl('scoreDisplay'), 'flex');
     hide(getEl('videosContainer'), 'flex'); show(getEl('videosEmptyState'));
     if(getEl('generateQuizBtn')) getEl('generateQuizBtn').disabled = false; if(getEl('generateVideosBtn')) getEl('generateVideosBtn').disabled = false;
-    switchTab('reviewer'); streamReviewer(); smartVideos();
+    switchTab('reviewer');
+    streamReviewer().then(() => {
+        if (hasSource()) smartVideos();
+    });
 }
 
 function fullReset() {
     uploadId++; //This line instantly kills pending background generators!
     
-    if(getEl('fileInput')) getEl('fileInput').value = ''; 
+    if(getEl('fileInput')) getEl('fileInput').value = '';
     currentBase64Image = null; currentText = null; currentGeneratedReviewerHTML = "";
+    currentMaterialId = null; dashMaterialId = null; dashQuizData = null; pendingQuizResult = null; pendingQuizAttempts = []; previousQuizQuestions = []; 
     
     hide(getEl('previewContainer'), 'flex'); show(getEl('uploadArea'));
     
@@ -812,7 +886,18 @@ async function streamReviewer() {
     if (!hasSource()) return;
     const myId = uploadId; const rc = getEl('reviewerContainer'), ls = getEl('reviewerLoadingState');
     hide(getEl('reviewerEmptyState')); hide(rc); show(ls, 'flex'); startLoadingTimer('reviewerTimer');
-    const payload = { contents: [{ role: 'user', parts: [{ text:'Act as an expert professor. Analyze the study material and create a highly detailed, comprehensive study guide. Extract all key academic concepts, definitions, theories, and supporting details. Expand on each point with thorough explanations provided in the text. Format as an HTML study guide using <h3>, <ul>, <li>, <p>, <strong>. Do not use markdown code blocks.' }].concat(sourceParts()) }] };
+    const payload = {
+        contents: [{
+            role: 'user',
+            parts: [{
+                text: 'Act as an expert professor. Paraphrase and synthesize the study material in your own original words (do not copy sentences verbatim) into a comprehensive, well-structured HTML study guide. Cover all key concepts, definitions, and theories. Use only <h3>, <ul>, <li>, <p>, <strong> tags. Do not use markdown code blocks.'
+            }].concat(sourceParts())
+        }],
+        generationConfig: {
+            maxOutputTokens: 8192,
+            temperature: 0.3
+        }
+    };
     let full = '';
     try {
         await gemStream(payload, (chunk) => {
@@ -837,13 +922,28 @@ async function generateQuizFromNotes() {
 
     hide(getEl('quizEmptyState')); hide(getEl('quizContainer'), 'flex'); show(getEl('quizLoadingState'), 'flex'); startLoadingTimer('quizTimer');
 
+    const mastered = previousQuizQuestions.filter(q => !missedQuizQuestions.includes(q));
+    const avoidClause = mastered.length
+        ? ` Do NOT repeat or closely rephrase these mastered questions: ${mastered.slice(-25).join(' | ')}.`
+        : '';
+    const reviewClause = missedQuizQuestions.length
+        ? ` The student previously got these wrong—re-test these exact concepts using freshly phrased questions alongside new topics: ${missedQuizQuestions.slice(-10).join(' | ')}.`
+        : '';
+
     const payload = { contents: [{ role: "user", parts: [ { text: `Analyze the material and generate exactly ${questionCount} multiple-choice questions based ONLY on the core academic concepts, definitions, and theories presented. Cover different parts of the material so questions do not repeat. Explicitly IGNORE metadata such as course codes, syllabus titles, student names, dates, university names, or page numbers.` }].concat(sourceParts()) }], generationConfig: { responseMimeType: "application/json", responseSchema: { type: "ARRAY", items: { type: "OBJECT", properties: { question: { type: "STRING" }, options: { type: "ARRAY", items: { type: "STRING" } }, correctAnswerIndex: { type: "INTEGER" }, explanation: { type: "STRING" } }, required: ["question", "options", "correctAnswerIndex", "explanation"] } } } };
 
     try {
         const text = await callGemini(payload);
         if (myId !== uploadId) return;
 
-        generatedQuizData = JSON.parse(text.replace(/```json|```/gi, '').trim()).slice(0, questionCount);
+        dashQuizData = JSON.parse(text.replace(/```json|```/gi, '').trim()).slice(0, questionCount);
+        previousQuizQuestions.push(...dashQuizData.map(q => q.question));
+        missedQuizQuestions = [];
+        generatedQuizData = dashQuizData;
+        dashMaterialId = null;
+        currentMaterialId = null;
+        pendingQuizResult = null;
+        pendingQuizAttempts = [];
         const ls = getEl('quizLoadingState'); if(ls) { ls.classList.add('hidden'); ls.classList.remove('flex'); }
         renderQuizUI();
     } catch (error) {
@@ -857,32 +957,7 @@ async function generateQuizFromNotes() {
 function renderQuizUI() {
     show(getEl('quizContainer'), 'flex'); const w = getEl('questionsWrapper'); if(!w) return; w.innerHTML = ''; userAnswers = {};
     show(getEl('submitQuizBtn')); if(getEl('submitQuizBtn')) getEl('submitQuizBtn').disabled = true; hide(getEl('scoreDisplay'), 'flex');
-    generatedQuizData.forEach((qData, qIndex) => {
-        const block = document.createElement('div'); block.className = 'bg-white dark:bg-[#2c2c2e] border border-gray-100 dark:border-gray-700 rounded-xl p-5 shadow-sm ios-card';
-        block.innerHTML = '<h3 class="text-base font-semibold mb-4"><span class="text-blue-500 mr-2">'+(qIndex + 1)+'.</span> '+escapeHTML(qData.question)+'</h3>';
-        const optionsDiv = document.createElement('div'); optionsDiv.className = 'space-y-3';
-        qData.options.forEach((optText, optIndex) => {
-            const label = document.createElement('label'); label.className = 'quiz-option flex items-center p-3 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-black';
-            label.innerHTML = '<input type="radio" name="q_'+qIndex+'" value="'+optIndex+'" class="h-4 w-4 text-blue-600"><span class="ml-3 text-sm">'+escapeHTML(optText)+'</span>';
-            label.querySelector('input').addEventListener('change', (e) => {
-                optionsDiv.querySelectorAll('label').forEach(l => { l.classList.remove('bg-blue-50', 'dark:bg-blue-900/30', 'border-blue-400', 'ring-1', 'ring-blue-400'); });
-                label.classList.add('bg-blue-50', 'dark:bg-blue-900/30', 'border-blue-400', 'ring-1', 'ring-blue-400');
-                userAnswers[qIndex] = parseInt(e.target.value, 10);
-                if (Object.keys(userAnswers).length === generatedQuizData.length && getEl('submitQuizBtn')) getEl('submitQuizBtn').disabled = false;
-            });
-            optionsDiv.appendChild(label);
-        });
-        block.appendChild(optionsDiv);
-        const expDiv = document.createElement('div'); expDiv.id = 'exp_' + qIndex; expDiv.className = 'hidden mt-4 p-3 bg-gray-50 dark:bg-black border-l-4 rounded-r-lg text-sm';
-        expDiv.innerHTML = '<span class="font-semibold block mb-1">Explanation:</span> <span class="text-gray-600 dark:text-gray-400">'+escapeHTML(qData.explanation)+'</span>';
-        block.appendChild(expDiv); w.appendChild(block);
-    });
-}
-
-function renderQuizUI() {
-    show(getEl('quizContainer'), 'flex'); const w = getEl('questionsWrapper'); if(!w) return; w.innerHTML = ''; userAnswers = {};
-    show(getEl('submitQuizBtn')); if(getEl('submitQuizBtn')) getEl('submitQuizBtn').disabled = true; hide(getEl('scoreDisplay'), 'flex');
-    generatedQuizData.forEach((qData, qIndex) => {
+    dashQuizData.forEach((qData, qIndex) => {
         const block = document.createElement('div'); block.className = 'bg-white dark:bg-[#2c2c2e] border border-gray-100 dark:border-gray-700 rounded-xl p-5 shadow-sm ios-card';
         block.innerHTML = '<h3 class="text-base font-semibold mb-4"><span class="text-blue-500 mr-2">'+(qIndex + 1)+'.</span> '+escapeHTML(qData.question)+'</h3>';
         const optionsDiv = document.createElement('div'); optionsDiv.className = 'space-y-3';
@@ -906,11 +981,13 @@ function renderQuizUI() {
 
 function gradeQuizDash() {
     let correctCount = 0; const w = getEl('questionsWrapper');
-    generatedQuizData.forEach((qData, qIndex) => {
+    dashQuizData.forEach((qData, qIndex) => {
         const isCorrect = userAnswers[qIndex] === qData.correctAnswerIndex;
-        if (isCorrect) correctCount++;
-        const block = w ? w.children[qIndex] : null;
-        if(block) {
+        if (isCorrect) {
+            correctCount++;
+            missedQuizQuestions = missedQuizQuestions.filter(q => q !== qData.question);
+        } else if (!missedQuizQuestions.includes(qData.question)) {
+            missedQuizQuestions.push(qData.question);
             block.querySelectorAll('input').forEach(r => r.disabled = true);
             block.querySelectorAll('label').forEach((label, optIndex) => {
                 label.className = 'flex items-center p-3 rounded-lg border opacity-70 cursor-default quiz-option';
@@ -928,11 +1005,16 @@ function gradeQuizDash() {
     const incorrectCount = generatedQuizData.length - correctCount;
     const quizResult = { correctCount, incorrectCount, totalQuestions: generatedQuizData.length, gradedAt: new Date().toLocaleString() };
     const quizAttempt = { answers: Object.assign({}, userAnswers), correctCount, incorrectCount, totalQuestions: generatedQuizData.length, gradedAt: quizResult.gradedAt };
-    if (currentMaterialId !== null) {
-        const savedItem = savedMaterials.find(m => m.id === currentMaterialId);
-        if (savedItem) { savedItem.quizResult = quizResult; if(!savedItem.quizAttempts) savedItem.quizAttempts = []; savedItem.quizAttempts.push(quizAttempt); }
-    } else { pendingQuizResult = quizResult; pendingQuizAttempts.push(quizAttempt); }
-    userStats.quizzesGraded++; syncUserStorage();
+    ipendingQuizResult = quizResult;
+    pendingQuizAttempts.push(quizAttempt);
+    if (dashMaterialId !== null) {
+        const savedItem = savedMaterials.find(m => m.id === dashMaterialId);
+        if (savedItem) {
+            savedItem.quizResult = quizResult;
+            if (!savedItem.quizAttempts) savedItem.quizAttempts = [];
+            savedItem.quizAttempts.push(quizAttempt);
+        }
+    }
 }
 
 

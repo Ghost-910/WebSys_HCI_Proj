@@ -1,13 +1,12 @@
 // auth.js: real sign-in for EduMaxxing (Firebase Authentication: email + password, and Google).
 // Load AFTER script.js:  <script src="auth.js"></script>
-// Needs a FIREBASE block in config.js (see the setup steps) and the site opened from http://localhost, not file://
 (async function () {
-    const IDLE_MINUTES = 30;                               // automatic sign-out after this long without activity
+    const IDLE_MINUTES = 30;                               
     const SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
 
     // Remove the old, unsafe login data right away
-    localStorage.removeItem('edumaxxing_users');           // held plain-text passwords
-    localStorage.removeItem('edumaxxing_current_user');    // anyone could type a name here to "log in"
+    localStorage.removeItem('edumaxxing_users');           
+    localStorage.removeItem('edumaxxing_current_user');    
     registeredUsers.length = 0; currentUser = null; showAuthScreen();
 
     //UI helpers

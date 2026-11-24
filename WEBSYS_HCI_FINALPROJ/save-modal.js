@@ -1,6 +1,3 @@
-// save-modal.js: a clearer, faster "Save study session" pop-up. Load AFTER script.js:
-//   <script src="save-modal.js"></script>
-// It builds on the existing pop-up (same buttons and ids), so saving still works exactly as before.
 (function () {
     const ov = getEl('saveModalOverlay'), card = ov.firstElementChild;
     const sel = getEl('saveSubjectSelect'), title = getEl('saveTitleInput'), ok = getEl('confirmSaveBtn');
@@ -49,14 +46,14 @@
     const chip = (kind, text) => `<span class="sum-chip sum-${kind}">${kind === 'ok' ? '✓' : '!'} ${escapeHTML(text)}</span>`;
     function renderSummary() {
         const hasReviewer = !!currentGeneratedReviewerHTML;
-        const hasQuiz = !!(generatedQuizData && generatedQuizData.length);
+        const hasQuiz = !!(dashQuizData && dashQuizData.length);
         const quizBusy = !getEl('quizLoadingState').classList.contains('hidden');
         const n = pendingQuizAttempts.length, parts = [];
         parts.push(hasReviewer ? chip('ok', 'Reviewer included') : chip('warn', 'No reviewer yet'));
         parts.push(quizBusy ? chip('warn', 'Quiz is still being made · not included yet')
             : hasQuiz ? chip('ok', 'Quiz included' + (n ? ` · ${n} attempt${n > 1 ? 's' : ''}` : ''))
             : chip('warn', 'No quiz yet · saved without it'));
-        const already = savedMaterials.find(m => m.id === currentMaterialId);
+        const already = savedMaterials.find(m => m.id === dashMaterialId);
         if (already) parts.push(chip('warn', `Already saved in “${already.subject}”. Saving again makes a copy.`));
         summary.innerHTML = parts.join('');
     }

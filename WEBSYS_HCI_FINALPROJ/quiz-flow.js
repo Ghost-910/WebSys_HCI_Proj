@@ -1,11 +1,6 @@
-// quiz-flow.js: load AFTER script.js:  <script src="quiz-flow.js"></script>
-// Fixes the "back" buttons around retaking a quiz, so each path returns to the right page.
-//   From the Quizzes page      -> quiz -> "Return to Quiz Record"            -> quiz record only
-//   From Subjects > a reviewer -> quiz (shown under the Quizzes tab) -> "Return to Reviewer and Quiz Record" -> that reviewer page (Subjects tab)
-// Also: collapsible quiz record, rename/delete attempts, and confirmation pop-ups before deleting.
 (function () {
-    let quizOrigin = 'reader';        // 'list' = started from the Quizzes page, 'reader' = started from a reviewer page
-    let readerRecordOnly = false;     // true while the reader shows only the quiz record
+    let quizOrigin = 'reader';        
+    let readerRecordOnly = false;     
 
     function setLabel(btn, text) {
         const t = [...btn.childNodes].reverse().find(n => n.nodeType === 3);

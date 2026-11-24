@@ -1,4 +1,3 @@
-// breadcrumbs.js (v2): load AFTER quiz-flow.js. Replaces the earlier breadcrumbs.js.
 // Dashboard card hover (rounded), breadcrumb trail, browser Back support, and usability safeguards.
 (function () {
     const st = document.createElement('style');
