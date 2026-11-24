@@ -32,14 +32,14 @@
 * **Input Validation Guards:** Enforces a `10 MB` file size ceiling and strict MIME/extension checks with clear toast notifications before modifying active workspace state.
 
 ### Hybrid AI Generation (Ollama + Gemini Failover)
-* **Local-First Inference (`ollama.js`):** Prioritizes a local Ollama microservice (`gemma4`) for zero-cost, offline-capable, privacy-preserving synthesis.
-* **Automatic Cloud Failover:** Seamlessly reroutes requests to the Google Gemini API whenever the local Ollama service is unreachable or offline.
-* **Self-Learning Wait Timer:** Records historical generation durations in `localStorage` to compute dynamic, hardware-aware estimated completion times alongside staged progress bars.
+- **Local-First Inference (`ollama.js`):** Prioritizes a local Ollama microservice (`gemma4`, sequential queue `MAX_PARALLEL = 1`) for zero-cost, offline-capable, privacy-preserving synthesis.
+- **Automatic Cloud Failover Chain:** Seamlessly reroutes to a 4-model Gemini chain (`gemini-3.5-flash-lite` → `gemini-3.1-flash-lite` → `gemini-3.8-flash` → `gemini-3.6-flash`) when local Ollama is unreachable, with SSE streaming, trailing-buffer flushing, and automatic retry on `RECITATION` stops or rate limits.
+- **Self-Learning Wait Timer:** Records historical generation durations in `localStorage` to compute dynamic, hardware-aware estimated completion times alongside staged progress bars.
 
 ### Multi-Modal Review Workspace
 Uses an iOS-inspired segmented control paired with a persistent source preview card to switch effortlessly between three study modes:
 1. **Structured Reviewers:** Clean, scannable HTML study guides with one-click **Copy** and **Print / Save as PDF** export utilities.
-2. **Customizable Practice Quizzes (`5 / 10 / 15` Questions):** Auto-graded active-recall assessments featuring live progress tracking, answer-count submit guards, detailed explanations, **Retake**, and **New Quiz** generation with anti-repeat question memory.
+2. **Customizable Practice Quizzes (`5 / 10 / 15` Questions):** Auto-graded active-recall assessments featuring live progress tracking, answer-count submit guards, detailed explanations, **Retake**, isolated Dashboard quiz state, and **New Quiz** generation that avoids repeating mastered questions while re-testing missed concepts.
 3. **Curated Video Lectures:** Topic-extracted YouTube tutorials fetched dynamically via the YouTube Data API v3 with resilient JSON response normalization.
 
 ### Offline-Resilient Subject Repository & Data Portability
@@ -164,10 +164,11 @@ EduMaxxing was engineered around **Jakob Nielsen's 10 Usability Heuristics** to 
 
 ## Future Roadmap
 
-* **Full 3-Tier Cloud Migration:** Transition from browser `localStorage` to a dedicated backend database and API layer (e.g., PostgreSQL / Firebase Firestore) to enable multi-device synchronization across laptops, tablets, and phones.
-* **Server-Side Key & Token Security:** Move external API key management and JWT session verification to a secure backend proxy while retaining **client-side file parsing** to minimize server storage and protect raw documents.
-* **Explicit Local-Only Privacy Toggle:** Expose a user-facing **"Local Mode"** switch in Profile settings so privacy-conscious students can lock inference strictly to their local Ollama instance and prevent external cloud fallback when desired.
-* **Richer Mobile & Accessibility Polish:** Further refine small-screen spacing, touch targets, and keyboard navigation for mobile study sessions.
+- **Multi-Quiz Sessions (`quizzes[]`):** Group multiple quizzes under a single study session with an explicit prompt to either append to an existing session or save as a new session.
+- **Full 3-Tier Cloud Migration:** Transition from browser `localStorage` to a dedicated backend database and API layer (e.g., PostgreSQL / Firebase Firestore) to enable multi-device synchronization across laptops, tablets, and phones.
+- **Server-Side Key & Token Security:** Move external API key management and JWT session verification to a secure backend proxy while retaining **client-side file parsing** to minimize server storage and protect raw documents.
+- **Explicit Local-Only Privacy Toggle:** Expose a user-facing **"Local Mode"** switch in Profile settings so privacy-conscious students can lock inference strictly to their local Ollama instance and prevent external cloud fallback when desired.
+- **Richer Mobile & Accessibility Polish:** Further refine small-screen spacing, touch targets, and keyboard navigation for mobile study sessions.
 
 ---
 
