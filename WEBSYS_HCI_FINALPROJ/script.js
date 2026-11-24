@@ -45,6 +45,64 @@ let pendingQuizResult = null;
 let pendingQuizAttempts = [];
 let savedMaterialReturnView = 'subjects';
 let savedMaterialReturnSubject = null;
+let dashQuizId = null;
+let currentQuizId = null;
+
+function createQuizId() {
+    return 'q_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+}
+
+function syncLegacyMaterialFields(m) {
+    if (!m) return;
+    const list = Array.isArray(m.quizzes) ? m.quizzes : [];
+    const latest = list.length ? list[list.length - 1] : null;
+    m.quizData = latest && Array.isArray(latest.quizData) ? latest.quizData : null;
+    m.quizResult = latest ? (latest.quizResult || null) : null;
+    m.quizAttempts = latest && Array.isArray(latest.quizAttempts) ? latest.quizAttempts : [];
+}
+
+function normalizeMaterial(m) {
+    if (!m || typeof m !== 'object') return m;
+    if (!Array.isArray(m.quizzes)) {
+        if (Array.isArray(m.quizData) && m.quizData.length > 0) {
+            m.quizzes = [{
+                id: 'q_' + (m.id || Date.now()),
+                title: 'Quiz 1',
+                createdAt: m.date || new Date().toLocaleDateString(),
+                quizData: m.quizData.slice(),
+                quizResult: m.quizResult ? Object.assign({}, m.quizResult) : null,
+                quizAttempts: Array.isArray(m.quizAttempts) ? m.quizAttempts.slice() : []
+            }];
+        } else {
+            m.quizzes = [];
+        }
+    } else {
+        m.quizzes = m.quizzes.map((q, idx) => ({
+            id: q.id || ('q_' + (m.id || Date.now()) + '_' + idx),
+            title: q.title || ('Quiz ' + (idx + 1)),
+            createdAt: q.createdAt || m.date || new Date().toLocaleDateString(),
+            quizData: Array.isArray(q.quizData) ? q.quizData : [],
+            quizResult: q.quizResult || null,
+            quizAttempts: Array.isArray(q.quizAttempts) ? q.quizAttempts : []
+        }));
+    }
+    syncLegacyMaterialFields(m);
+    return m;
+}
+
+function normalizeAllMaterials() {
+    if (!Array.isArray(savedMaterials)) savedMaterials = [];
+    savedMaterials.forEach(normalizeMaterial);
+}
+
+function getQuizById(material, quizId) {
+    if (!material) return null;
+    normalizeMaterial(material);
+    if (!material.quizzes.length) return null;
+    return material.quizzes.find(q => q.id === quizId) || material.quizzes[0];
+}
+
+normalizeAllMaterials();
 
 //  DOM Helpers 
 function getEl(id) { return document.getElementById(id); }
@@ -262,6 +320,7 @@ function loadUserData() {
     if (!currentUser) return;
     savedSubjects = JSON.parse(localStorage.getItem(getSubjectsKey()) || '[]');
     savedMaterials = JSON.parse(localStorage.getItem(getMaterialsKey()) || '[]');
+    normalizeAllMaterials();
     userStats = JSON.parse(localStorage.getItem(getStatsKey()) || '{"uploads":0,"quizzesGraded":0}');
     syncUserUI(); renderSubjectsGrid();
 }
@@ -282,7 +341,7 @@ function syncUserUI() {
     setTxt('drawerAvatar', initial); setTxt('drawerUserName', currentUser.name); setTxt('drawerUserEmail', currentUser.email);
 
     setTxt('statSubjectsCount', savedSubjects.length);
-    const quizCount = savedMaterials.filter(m => m.quizData && m.quizData.length > 0).length;
+    const quizCount = savedMaterials.reduce((sum, m) => sum + (Array.isArray(m.quizzes) ? m.quizzes.length : (m.quizData && m.quizData.length ? 1 : 0)), 0);
     setTxt('statQuizzesCount', quizCount);
 
     setTxt('profileBigAvatar', initial); setTxt('profileHeroName', currentUser.name); setTxt('profileHeroEmail', currentUser.email);
@@ -450,6 +509,8 @@ if (sel) {
     const smo = getEl('saveModalOverlay');
     if(smo) {
         smo.addEventListener('click', (e) => {
+            if (smo.dataset.saveMode === 'append') return;
+            if (!e.target.closest('#confirmSaveBtn') || sel.value !== '__new__') return;
             if (!e.target.closest('#confirmSaveBtn') || sel.value !== '__new__') return;
             const name = input.value.trim();
             if (!name) { e.stopPropagation(); showToast('Type a name for your new subject.'); input.focus(); return; }
@@ -463,49 +524,104 @@ if (sel) {
 }
 addEvt('cancelSaveBtn', 'click', () => closeModal(getEl('saveModalOverlay')));
 addEvt('confirmSaveBtn', 'click', () => {
+    const overlay = getEl('saveModalOverlay');
+    const mode = (overlay && overlay.dataset.saveMode) || 'new';
+    const hasQuiz = Array.isArray(dashQuizData) && dashQuizData.length > 0;
+    const targetSelect = getEl('saveTargetSessionSelect');
+    const targetId = targetSelect && targetSelect.value ? Number(targetSelect.value) : dashMaterialId;
+
+    if (mode === 'append' && targetId) {
+        const existing = savedMaterials.find(m => m.id === targetId);
+        if (existing) {
+            normalizeMaterial(existing);
+            if (!existing.reviewerHTML && currentGeneratedReviewerHTML) {
+                existing.reviewerHTML = currentGeneratedReviewerHTML;
+            }
+            if (hasQuiz) {
+                const nameInput = getEl('saveQuizNameInput');
+                const quizTitle = (nameInput && nameInput.value.trim()) || ('Quiz ' + (existing.quizzes.length + 1));
+                const newQuiz = {
+                    id: createQuizId(),
+                    title: quizTitle,
+                    createdAt: new Date().toLocaleDateString(),
+                    quizData: dashQuizData.slice(),
+                    quizResult: pendingQuizResult ? Object.assign({}, pendingQuizResult) : null,
+                    quizAttempts: pendingQuizAttempts.slice()
+                };
+                existing.quizzes.push(newQuiz);
+                dashMaterialId = existing.id;
+                currentMaterialId = existing.id;
+                dashQuizId = newQuiz.id;
+                currentQuizId = newQuiz.id;
+                syncLegacyMaterialFields(existing);
+            }
+            syncUserStorage(); renderSubjectsGrid(); renderMasteryList();
+            closeModal(overlay);
+            showToast(`Added quiz to “${existing.title}”!`);
+            return;
+        }
+    }
+
     const targetSubject = getEl('saveSubjectSelect') ? getEl('saveSubjectSelect').value : '';
     const tEl = getEl('saveTitleInput');
     const title = tEl ? (tEl.value.trim() || 'Study Session') : 'Study Session';
+    const firstQuiz = hasQuiz ? {
+        id: createQuizId(),
+        title: 'Quiz 1',
+        createdAt: new Date().toLocaleDateString(),
+        quizData: dashQuizData.slice(),
+        quizResult: pendingQuizResult ? Object.assign({}, pendingQuizResult) : null,
+        quizAttempts: pendingQuizAttempts.slice()
+    } : null;
+
     const newMaterial = {
         id: Date.now(),
         title,
         subject: targetSubject,
         date: new Date().toLocaleDateString(),
         reviewerHTML: currentGeneratedReviewerHTML,
-        quizData: Array.isArray(dashQuizData) ? dashQuizData.slice() : null,
-        quizResult: pendingQuizResult ? Object.assign({}, pendingQuizResult) : null,
-        quizAttempts: pendingQuizAttempts.slice()
+        quizzes: firstQuiz ? [firstQuiz] : []
     };
+    syncLegacyMaterialFields(newMaterial);
     savedMaterials.push(newMaterial);
     dashMaterialId = newMaterial.id;
     currentMaterialId = newMaterial.id;
+    dashQuizId = firstQuiz ? firstQuiz.id : null;
+    currentQuizId = dashQuizId;
     syncUserStorage(); renderSubjectsGrid(); renderMasteryList();
-    closeModal(getEl('saveModalOverlay'));
+    closeModal(overlay);
     showToast("Saved to " + targetSubject + "!");
 });
 
 //  Quizzes 
 function renderMasteryList() {
-    const items = savedMaterials.filter(material => material.quizData && material.quizData.length > 0);
+    const entries = [];
+    savedMaterials.forEach(material => {
+        normalizeMaterial(material);
+        material.quizzes.forEach((quiz, idx) => {
+            if (quiz.quizData && quiz.quizData.length > 0) {
+                entries.push({ material, quiz, idx });
+            }
+        });
+    });
     const masteryList = getEl('masteryPageList');
     if (!masteryList) return;
-    if (items.length === 0) {
+    if (entries.length === 0) {
         masteryList.innerHTML = '<div class="col-span-full ios-card p-8 text-center text-gray-500">No quizzes available yet. Generate and save a quiz to practice it here.</div>';
         return;
     }
-    masteryList.innerHTML = items.map(material => {
-        const hasAttempts = material.quizAttempts && material.quizAttempts.length > 0;
-        const bestScore = hasAttempts ? Math.max.apply(Math, material.quizAttempts.map(a => a.correctCount)) : (material.quizResult ? material.quizResult.correctCount : 0);
-        return '<div class="ios-card p-5 flex flex-col justify-between shadow-sm"><div><h3 class="font-bold text-gray-900 dark:text-white text-lg leading-tight mb-1 truncate">'+escapeHTML(material.title || 'Saved Reviewer')+'</h3><p class="text-xs font-semibold text-blue-500 uppercase tracking-wider mb-3">'+escapeHTML(material.subject || 'Uncategorized')+'</p><p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Highest Score: <span class="font-bold text-gray-900 dark:text-white">'+bestScore+'/'+material.quizData.length+'</span></p></div><div class="flex gap-2 w-full mt-auto pt-4 border-t border-gray-100 dark:border-gray-800"><button onclick="localSavedMaterial('+Number(material.id)+', \'mastery\')" class="ios-btn ios-btn-blue flex-1 text-sm">'+(hasAttempts ? 'Retake' : 'Take Quiz')+'</button><button onclick="removeMaterial('+Number(material.id)+')" class="ios-btn ios-btn-tint flex-1 text-sm">Remove</button></div></div>';
+    masteryList.innerHTML = entries.map(({ material, quiz, idx }) => {
+        const hasAttempts = quiz.quizAttempts && quiz.quizAttempts.length > 0;
+        const bestScore = hasAttempts
+            ? Math.max.apply(Math, quiz.quizAttempts.map(a => a.correctCount))
+            : (quiz.quizResult ? quiz.quizResult.correctCount : 0);
+        const showQuizName = material.quizzes.length > 1 || (quiz.title && quiz.title !== 'Quiz 1');
+        const heading = showQuizName
+            ? `${escapeHTML(material.title || 'Saved Reviewer')} · ${escapeHTML(quiz.title || ('Quiz ' + (idx + 1)))}`
+            : escapeHTML(material.title || 'Saved Reviewer');
+        return '<div class="ios-card p-5 flex flex-col justify-between shadow-sm"><div><h3 class="font-bold text-gray-900 dark:text-white text-lg leading-tight mb-1 truncate" title="' + heading + '">' + heading + '</h3><p class="text-xs font-semibold text-blue-500 uppercase tracking-wider mb-3">' + escapeHTML(material.subject || 'Uncategorized') + '</p><p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Highest Score: <span class="font-bold text-gray-900 dark:text-white">' + bestScore + '/' + quiz.quizData.length + '</span></p></div><div class="flex gap-2 w-full mt-auto pt-4 border-t border-gray-100 dark:border-gray-800"><button onclick="localSavedMaterial(' + Number(material.id) + ', \'mastery\', \'' + quiz.id + '\')" class="ios-btn ios-btn-blue flex-1 text-sm">' + (hasAttempts ? 'Retake' : 'Take Quiz') + '</button><button onclick="removeQuizFromMaterial(' + Number(material.id) + ', \'' + quiz.id + '\')" class="ios-btn ios-btn-tint flex-1 text-sm">Remove</button></div></div>';
     }).join('');
 }
-
-window.removeMaterial = function(id) {
-    if (confirm("Are you sure you want to delete this study session completely?")) {
-        savedMaterials = savedMaterials.filter(m => m.id !== id);
-        syncUserStorage(); renderMasteryList(); renderSubjectsGrid(); showToast('Study session removed.');
-    }
-};
 
 function renderSavedQuizAttempts(item) {
     const container = getEl('savedQuizAttempts'); if(!container) return;
@@ -619,12 +735,14 @@ addEvt('standaloneSubmitQuizBtn', 'click', () => {
     const quizAttempt = { answers: Object.assign({}, userAnswers), correctCount, incorrectCount, totalQuestions: generatedQuizData.length, gradedAt: new Date().toLocaleString() };
 
     const savedItem = savedMaterials.find(m => m.id === currentMaterialId);
-    if (savedItem) {
-        if(!savedItem.quizAttempts) savedItem.quizAttempts = [];
-        savedItem.quizAttempts.push(quizAttempt);
-        if (!savedItem.quizResult || correctCount > savedItem.quizResult.correctCount) {
-            savedItem.quizResult = { correctCount, incorrectCount, totalQuestions: generatedQuizData.length, gradedAt: quizAttempt.gradedAt };
+    const savedQuiz = getQuizById(savedItem, currentQuizId);
+    if (savedItem && savedQuiz) {
+        if (!Array.isArray(savedQuiz.quizAttempts)) savedQuiz.quizAttempts = [];
+        savedQuiz.quizAttempts.push(quizAttempt);
+        if (!savedQuiz.quizResult || correctCount > savedQuiz.quizResult.correctCount) {
+            savedQuiz.quizResult = { correctCount, incorrectCount, totalQuestions: generatedQuizData.length, gradedAt: quizAttempt.gradedAt };
         }
+        syncLegacyMaterialFields(savedItem);
         syncUserStorage();
     }
     userStats.quizzesGraded++; syncUserStorage(); showToast('Quiz results saved!');
@@ -813,7 +931,7 @@ async function handleFileSelect(file) {
         return showToast('File is too large. Maximum allowed size is 10MB.');
     }
 
-    uploadId++; currentMaterialId = null; dashMaterialId = null; dashQuizData = null; pendingQuizResult = null; pendingQuizAttempts = []; previousQuizQuestions = [];
+    uploadId++; currentMaterialId = null; dashMaterialId = null; dashQuizId = null; currentQuizId = null; dashQuizData = null; pendingQuizResult = null; pendingQuizAttempts = []; previousQuizQuestions = [];
     currentUploadedFileName = file.name; hide(getEl('saveActionHeader'));
     currentBase64Image = null; currentMimeType = null; currentText = null; currentGeneratedReviewerHTML = ""; generatedQuizData = null;
     userStats.uploads++; syncUserStorage();
@@ -868,7 +986,7 @@ function fullReset() {
     
     if(getEl('fileInput')) getEl('fileInput').value = '';
     currentBase64Image = null; currentText = null; currentGeneratedReviewerHTML = "";
-    currentMaterialId = null; dashMaterialId = null; dashQuizData = null; pendingQuizResult = null; pendingQuizAttempts = []; previousQuizQuestions = []; 
+    currentMaterialId = null; dashMaterialId = null; dashQuizId = null; currentQuizId = null; dashQuizData = null; pendingQuizResult = null; pendingQuizAttempts = []; previousQuizQuestions = []; 
     
     hide(getEl('previewContainer'), 'flex'); show(getEl('uploadArea'));
     
@@ -940,8 +1058,7 @@ async function generateQuizFromNotes() {
         previousQuizQuestions.push(...dashQuizData.map(q => q.question));
         missedQuizQuestions = [];
         generatedQuizData = dashQuizData;
-        dashMaterialId = null;
-        currentMaterialId = null;
+        dashQuizId = null;
         pendingQuizResult = null;
         pendingQuizAttempts = [];
         const ls = getEl('quizLoadingState'); if(ls) { ls.classList.add('hidden'); ls.classList.remove('flex'); }
@@ -1012,17 +1129,19 @@ function gradeQuizDash() {
 
     pendingQuizResult = quizResult;
     pendingQuizAttempts.push(quizAttempt);
-    if (dashMaterialId !== null) {
+    if (dashMaterialId !== null && dashQuizId !== null) {
         const savedItem = savedMaterials.find(m => m.id === dashMaterialId);
-        if (savedItem) {
-            savedItem.quizResult = quizResult;
-            if (!savedItem.quizAttempts) savedItem.quizAttempts = [];
-            savedItem.quizAttempts.push(quizAttempt);
+        const savedQuiz = getQuizById(savedItem, dashQuizId);
+        if (savedItem && savedQuiz) {
+            if (!Array.isArray(savedQuiz.quizAttempts)) savedQuiz.quizAttempts = [];
+            savedQuiz.quizAttempts.push(quizAttempt);
+            if (!savedQuiz.quizResult || correctCount > savedQuiz.quizResult.correctCount) {
+                savedQuiz.quizResult = quizResult;
+            }
+            syncLegacyMaterialFields(savedItem);
         }
     }
-    userStats.quizzesGraded++; syncUserStorage();
 }
-
 
 const VID_SCHEMA = { type: 'OBJECT', properties: { topic: { type: 'STRING' }, suggestions: { type: 'ARRAY', items: { type: 'OBJECT', properties: { title: { type: 'STRING' }, query: { type: 'STRING' }, reason: { type: 'STRING' } }, required: ['title', 'query', 'reason'] } } }, required: ['topic', 'suggestions'] };
 async function smartVideos() {
