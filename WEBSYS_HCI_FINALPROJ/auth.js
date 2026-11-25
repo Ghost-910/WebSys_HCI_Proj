@@ -1,5 +1,4 @@
 // auth.js: real sign-in for EduMaxxing (Firebase Authentication: email + password, and Google).
-// Load AFTER script.js:  <script src="auth.js"></script>
 (async function () {
     const IDLE_MINUTES = 30;                               
     const SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
